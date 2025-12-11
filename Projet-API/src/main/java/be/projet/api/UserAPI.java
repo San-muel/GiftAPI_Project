@@ -16,11 +16,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import be.projet.DAO.UserDao;
 import be.projet.model.User;
-
+//test
 @Path("/user")
 public class UserAPI {
 
-    // 1. Récupérer tous les utilisateurs
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public Response getAllUsers() {
