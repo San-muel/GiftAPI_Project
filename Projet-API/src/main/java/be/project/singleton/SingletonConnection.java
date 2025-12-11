@@ -1,4 +1,4 @@
-package be.projet.DAO; // Adaptez le package selon votre structure
+package be.project.singleton; // Adaptez le package selon votre structure
 
 import java.sql.Connection;
 import java.sql.DriverManager;

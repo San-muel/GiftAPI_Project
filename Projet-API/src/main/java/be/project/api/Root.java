@@ -1,4 +1,4 @@
-package be.projet.api;
+package be.project.api;
 
 import javax.ws.rs.ApplicationPath;
 import javax.ws.rs.core.Application;
