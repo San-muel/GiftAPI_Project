@@ -1,11 +1,14 @@
 package be.project.model;
 
+import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Set;
 
-public class Gift {
+public class Gift implements Serializable {
 
-    private int id;
+
+	private static final long serialVersionUID = 7201519647003409625L;
+	private int id;
     private String name;
     private String description;
     private double price;

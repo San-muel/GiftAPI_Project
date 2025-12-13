@@ -1,10 +1,12 @@
 package be.project.model;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
-public class SharedWishlist {
+public class SharedWishlist implements Serializable {
 
-    private int id;
+	private static final long serialVersionUID = -2811572698812735751L;
+	private int id;
     private LocalDateTime sharedAt;  
     private String notification;         
 

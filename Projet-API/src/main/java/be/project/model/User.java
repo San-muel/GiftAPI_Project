@@ -1,15 +1,21 @@
 package be.project.model;
 
+import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
-public class User {
+public class User implements Serializable {
 
+	private static final long serialVersionUID = 5297121229532248788L;
 	private int id;
 	private String username;
 	private String email;
 	private String psw;
+	
+    // NOUVEAU CHAMP POUR LE TOKEN JWT
+    private String token; 
+    
 	private Set<Contribution> contributions = new HashSet<>();
 	private Set<Wishlist> WishlistPartager = new HashSet<>();
 	private Set<Wishlist> WishlistCreer = new HashSet<>();
@@ -31,6 +37,17 @@ public class User {
 
     public void setId(int id) {
         this.id = id;
+    }
+
+    // NOUVEAU GETTER POUR LE TOKEN
+    public String getToken() {
+        return token;
+    }
+
+    // NOUVEAU SETTER POUR LE TOKEN
+    // Le UserService/UserAPI l'utilisera pour insérer le token avant de renvoyer le JSON.
+    public void setToken(String token) {
+        this.token = token;
     }
 
     public String getUsername() {
@@ -93,7 +110,7 @@ public class User {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        User user = (User) o;  // ← C'était Wishlist avant ! Erreur grave corrigée
+        User user = (User) o;  
         return id == user.id;
     }
 

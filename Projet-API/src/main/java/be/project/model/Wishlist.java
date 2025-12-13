@@ -1,13 +1,15 @@
 package be.project.model;
 
+import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
-public class Wishlist {
+public class Wishlist implements Serializable {
 
-    private int id;
+	private static final long serialVersionUID = 7031345627323684647L;
+	private int id;
     private String title;
     private String occasion;         
     private LocalDate expirationDate;

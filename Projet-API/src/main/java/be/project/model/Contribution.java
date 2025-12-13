@@ -1,5 +1,6 @@
 package be.project.model;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
@@ -11,9 +12,10 @@ import be.project.DAO.DAO;
 // Les imports be.project.DAO.ContributionDAO et be.project.singleton.SingletonConnection
 // ne sont plus nécessaires car l'accès est délégué à la Factory.
 
-public class Contribution {
+public class Contribution implements Serializable {
 
-    private int id;
+	private static final long serialVersionUID = -1788323929082771022L;
+	private int id;
     private double amount;
     private LocalDateTime contributedAt;
     private String comment;
