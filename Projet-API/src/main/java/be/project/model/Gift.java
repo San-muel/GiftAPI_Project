@@ -4,6 +4,8 @@ import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Set;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 public class Gift implements Serializable {
 
 
@@ -15,6 +17,7 @@ public class Gift implements Serializable {
     private Integer priority;  
     private String photoUrl;
     private Set<Contribution> contributions = new HashSet<>();
+    @JsonIgnore
     private Wishlist wishlist;
 
     public Gift() {}
@@ -98,6 +101,7 @@ public class Gift implements Serializable {
         this.contributions.add(contribution);
     }
 
+    @JsonIgnore
     public GiftStatus getStatus() {
         double totalContributed = contributions.stream()
                 .mapToDouble(Contribution::getAmount)

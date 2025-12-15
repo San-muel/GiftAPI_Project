@@ -6,12 +6,14 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.List;
+import be.project.model.Gift;
 import be.project.model.SharedWishlist;
 import be.project.model.Status;
 import be.project.model.User;
 import be.project.model.Wishlist;
 import oracle.jdbc.OracleTypes;
 
+// Supposons que AbstractDAO est une classe générique qui gère la connexion
 public class UserDAO extends AbstractDAO<User> {
 
     public UserDAO(Connection connection) {
@@ -19,13 +21,12 @@ public class UserDAO extends AbstractDAO<User> {
     }
 
     /**
-     * Authentification et HYDRATATION COMPLÈTE de l'utilisateur.
-     * Appelle la procédure stockée pkg_user_auth.authenticate pour vérifier
-     * les identifiants, puis charge toutes ses relations (loadUserRelations).
+     * Authentification de l'utilisateur et hydratation complète de l'objet User.
+     * Appelle pkg_user_auth.authenticate.
      *
      * @param email Email de l'utilisateur.
      * @param plainPassword Mot de passe en clair.
-     * @return L'objet User HYDRATÉ (avec Wishlists, etc.) si l'authentification réussit, sinon null.
+     * @return L'objet User HYDRATÉ si l'authentification réussit, sinon null.
      */
     public User authenticate(String email, String plainPassword) {
     	    User user = null;
@@ -57,7 +58,7 @@ public class UserDAO extends AbstractDAO<User> {
 
     	            System.out.println("DAO DEBUG: Authentification réussie pour " + user.getEmail());
                     
-                    // NOUVEAU : Chargement des relations (Wishlists, Contributions, etc.)
+                    // Chargement des relations (Wishlists, Gifts) après authentification
                     this.loadUserRelations(user); 
     	        } else {
     	            System.out.println("DAO DEBUG: Échec authentification : " + (errorMsg != null ? errorMsg : "Inconnu"));
@@ -71,23 +72,82 @@ public class UserDAO extends AbstractDAO<User> {
     	    return user;
     	}
     
+    //----------------------------------------------------------------------
+    // Chargement des Gifts pour une Wishlist
+    //----------------------------------------------------------------------
+
     /**
-     * Charge les relations de l'utilisateur (Wishlists créées, partagées, etc.)
-     * ... (Reste de la méthode inchangé, car elle est correcte) ...
+     * Charge tous les objets Gift associés à une Wishlist donnée.
+     * Utilise la procédure stockée pkg_wishlist_data.get_gifts.
+     *
+     * @param wishlist La Wishlist à hydrater avec les Gifts.
+     */
+    public void loadWishlistGifts(Wishlist wishlist) {
+        if (wishlist == null || wishlist.getId() == 0) return;
+
+        String sql = "{call pkg_wishlist_data.get_gifts(?, ?)}";
+        
+        int giftCount = 0;
+
+        try (CallableStatement cs = connection.prepareCall(sql)) {
+            cs.setInt(1, wishlist.getId());
+            cs.registerOutParameter(2, OracleTypes.CURSOR);
+
+            cs.execute();
+
+            try (ResultSet rs = (ResultSet) cs.getObject(2)) {
+                while (rs.next()) {
+                    Gift gift = new Gift();
+                    gift.setId(rs.getInt("ID"));
+                    gift.setName(rs.getString("NAME"));
+                    gift.setDescription(rs.getString("DESCRIPTION"));
+                    gift.setPrice(rs.getDouble("PRICE"));
+                    
+                    // Gérer l'Integer Priority qui peut être NULL en base
+                    int priorityValue = rs.getInt("PRIORITY");
+                    if (!rs.wasNull()) {
+                         gift.setPriority(priorityValue);
+                    } else {
+                         gift.setPriority(null);
+                    }
+                    
+                    gift.setPhotoUrl(rs.getString("PHOTO_URL"));
+                    gift.setwishlist(wishlist); 
+                    
+                    wishlist.getGifts().add(gift); 
+                    giftCount++;
+                    
+                    System.out.println("DAO DEBUG: Gift chargé pour Wishlist " + wishlist.getId() + " -> " + gift.getName());
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("DAO ERROR: Erreur lors du chargement des Gifts pour la Wishlist " + wishlist.getId());
+            e.printStackTrace();
+        }
+        System.out.println("DAO DEBUG: " + giftCount + " Gifts chargés pour Wishlist " + wishlist.getId());
+    }
+    
+    //----------------------------------------------------------------------
+    // Chargement de toutes les relations de l'utilisateur
+    //----------------------------------------------------------------------
+
+    /**
+     * Charge les collections de l'utilisateur (Wishlists créées, partagées, infos, et leurs Gifts).
+     * Utilise la procédure stockée pkg_user_data.load_user_data.
      */
     public void loadUserRelations(User user) {
         if (user == null || user.getId() == 0) return;
 
         // La procédure stockée retourne 4 REF CURSORs
         String sql = "{call pkg_user_data.load_user_data(?, ?, ?, ?, ?)}";
-        // ... (Reste du code de mapping des curseurs) ...
+
         try (CallableStatement cs = connection.prepareCall(sql)) {
             cs.setInt(1, user.getId());
 
-            cs.registerOutParameter(2, OracleTypes.CURSOR);
-            cs.registerOutParameter(3, OracleTypes.CURSOR);
-            cs.registerOutParameter(4, OracleTypes.CURSOR);
-            cs.registerOutParameter(5, OracleTypes.CURSOR);
+            cs.registerOutParameter(2, OracleTypes.CURSOR); // Wishlists créées
+            cs.registerOutParameter(3, OracleTypes.CURSOR); // Wishlists partagées
+            cs.registerOutParameter(4, OracleTypes.CURSOR); // Infos de partage
+            cs.registerOutParameter(5, OracleTypes.CURSOR); // Contributions
 
             cs.execute();
             
@@ -108,6 +168,9 @@ public class UserDAO extends AbstractDAO<User> {
                     user.getCreatedWishlists().add(wl); 
                     createdCount++;
                     System.out.println("DAO DEBUG: Wishlist Créée chargée -> ID: " + wl.getId() + ", Titre: " + wl.getTitle());
+
+                    // HYDRATATION : Chargement des Gifts pour cette Wishlist
+                    this.loadWishlistGifts(wl);
                 }
             }
             System.out.println("DAO DEBUG: " + createdCount + " Wishlists Créées chargées.");
@@ -128,6 +191,9 @@ public class UserDAO extends AbstractDAO<User> {
                     user.getSharedWishlists().add(wl);
                     sharedCount++;
                     System.out.println("DAO DEBUG: Wishlist Partagée chargée -> ID: " + wl.getId() + ", Titre: " + wl.getTitle());
+                    
+                    // HYDRATATION : Chargement des Gifts pour cette Wishlist
+                    this.loadWishlistGifts(wl);
                 }
             }
             System.out.println("DAO DEBUG: " + sharedCount + " Wishlists Partagées chargées.");
@@ -150,7 +216,7 @@ public class UserDAO extends AbstractDAO<User> {
             System.out.println("DAO DEBUG: " + infoCount + " Infos de Partage chargées.");
 
 
-            // 4. Contributions (À implémenter si besoin d'afficher)
+            // 4. Contributions (Non implémenté ici, mais le curseur est géré)
 
         } catch (SQLException e) {
             System.err.println("DAO ERROR: Erreur lors du chargement des relations pour l'utilisateur " + user.getId());
@@ -158,34 +224,37 @@ public class UserDAO extends AbstractDAO<User> {
         }
     }
     
-    // ... (Autres méthodes stub) ...   
+    //----------------------------------------------------------------------
+    // Implémentations des méthodes héritées (pour la complétude)
+    //----------------------------------------------------------------------
+    
     @Override
     public boolean create(User user) {
-        // Logique de création (à implémenter via procédure stockée)
+        // Logique de création (à implémenter)
         return false;
     }
 
     @Override
     public boolean delete(User obj) {
-        // Logique de suppression (à implémenter via procédure stockée)
+        // Logique de suppression (à implémenter)
         return false;
     }
 
     @Override
     public boolean update(User obj) {
-        // Logique de mise à jour (à implémenter via procédure stockée)
+        // Logique de mise à jour (à implémenter)
         return false;
     }
 
     @Override
     public User find(int id) {
-        // Logique de recherche par ID (à implémenter via fonction/procédure)
+        // Logique de recherche par ID (à implémenter)
         return null;
     }
 
     @Override
     public List<User> findAll() {
-        // Logique de recherche de tous les utilisateurs (à implémenter via procédure/collection)
+        // Logique de recherche de tous les utilisateurs (à implémenter)
         return null;
     }
 }
