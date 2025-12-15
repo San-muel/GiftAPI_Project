@@ -13,7 +13,7 @@ public class Wishlist implements Serializable {
     private String title;
     private String occasion;         
     private LocalDate expirationDate;
-    private String status; 
+    private Status status; 
     private User owner;
     private Set<User> sharedWithUsers = new HashSet<>();
     private Set<Gift> gifts = new HashSet<>();
@@ -21,7 +21,7 @@ public class Wishlist implements Serializable {
     public Wishlist() {}
     
     public Wishlist(int id, String title, String occasion, LocalDate expirationDate,
-            String status, User owner) {
+    			Status  status, User owner) {
 		this();
 		this.id = id;
 		this.title = title;
@@ -62,11 +62,11 @@ public class Wishlist implements Serializable {
         this.expirationDate = expirationDate;
     }
 
-    public String getStatus() {
+    public Status  getStatus() {
         return status;
     }
 
-    public void setStatus(String status) {
+    public void setStatus(Status status) {
         this.status = status;
     }
 
