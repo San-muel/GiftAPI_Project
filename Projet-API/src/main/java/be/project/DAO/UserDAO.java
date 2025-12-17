@@ -198,24 +198,29 @@ public class UserDAO extends AbstractDAO<User> {
             }
             System.out.println("DAO DEBUG: " + sharedCount + " Wishlists Partagées chargées.");
 
-            // 3. Infos de partage
+            // 3. Infos de partage (Liaison entre la Wishlist et les détails du partage)
             int infoCount = 0;
             try (ResultSet rs = (ResultSet) cs.getObject(4)) {
                 while (rs.next()) {
                     SharedWishlist sw = new SharedWishlist();
+                    
+                    // On utilise WISHLIST_ID comme ID pour l'objet SharedWishlist
                     sw.setId(rs.getInt("WISHLIST_ID")); 
                     
                     if (rs.getTimestamp("SHARED_AT") != null) {
                         sw.setSharedAt(rs.getTimestamp("SHARED_AT").toLocalDateTime());
                     }
+                    
                     sw.setNotification(rs.getString("NOTIFICATION"));
+                    
+                    // Ajout à la collection de l'utilisateur
                     user.getSharedWishlistInfos().add(sw);
                     infoCount++;
+                    
+                    System.out.println("DAO DEBUG: Info de partage ajoutée pour la Wishlist ID: " + sw.getId());
                 }
             }
-            System.out.println("DAO DEBUG: " + infoCount + " Infos de Partage chargées.");
-
-
+            System.out.println("DAO DEBUG: " + infoCount + " objets SharedWishlist créés.");
             // 4. Contributions (Non implémenté ici, mais le curseur est géré)
 
         } catch (SQLException e) {
@@ -230,8 +235,37 @@ public class UserDAO extends AbstractDAO<User> {
     
     @Override
     public boolean create(User user) {
-        // Logique de création (à implémenter)
-        return false;
+        // Appel de la procédure stockée via le package
+        String sql = "{call pkg_user_auth.register_user(?, ?, ?, ?, ?)}";
+
+        try (CallableStatement cs = connection.prepareCall(sql)) {
+            // Paramètres d'entrée (IN)
+            cs.setString(1, user.getUsername());
+            cs.setString(2, user.getEmail().trim().toLowerCase());
+            cs.setString(3, user.getPsw()); // Le mot de passe en clair
+
+            // Paramètres de sortie (OUT)
+            cs.registerOutParameter(4, Types.VARCHAR); // p_success
+            cs.registerOutParameter(5, Types.VARCHAR); // p_error_msg
+
+            cs.execute();
+
+            String successStr = cs.getString(4);
+            String errorMsg = cs.getString(5);
+
+            if ("TRUE".equalsIgnoreCase(successStr)) {
+                System.out.println("DAO DEBUG: Inscription réussie pour " + user.getEmail());
+                return true;
+            } else {
+                System.err.println("DAO DEBUG: Échec inscription : " + errorMsg);
+                return false;
+            }
+
+        } catch (SQLException e) {
+            System.err.println("DAO ERROR: Erreur lors de l'appel à pkg_user_auth.register_user");
+            e.printStackTrace();
+            return false;
+        }
     }
 
     @Override

@@ -63,6 +63,50 @@ public class UserService {
         
         return authenticatedUser; 
     }
+    
+    /**
+     * Logique métier pour l'inscription d'un nouvel utilisateur.
+     * @param newUser L'objet User contenant username, email et psw.
+     * @return true si la ressource a été créée en base de données, sinon false.
+     */
+    public boolean register(User newUser) {
+        System.out.println("SERVICE DEBUG: Tentative d'inscription pour " + newUser.getEmail());
+        
+        Connection conn = null;
+        boolean isCreated = false;
+        
+        try {
+            // 1. Obtention de la connexion via le Singleton
+            conn = getConnection(); 
+            
+            if (conn == null || conn.isClosed()) {
+                System.err.println("SERVICE ERROR: Connexion à la base de données indisponible.");
+                return false;
+            }
+
+            // 2. Instanciation du DAO (le DAO utilise les colonnes USERNAME, EMAIL, PSW)
+            UserDAO userDAO = new UserDAO(conn); 
+            
+            // 3. Appel au DAO pour l'insertion
+            // Le DAO doit utiliser la procédure stockée pour le hachage du mot de passe
+            isCreated = userDAO.create(newUser);
+            
+            if (isCreated) {
+                System.out.println("SERVICE DEBUG: Inscription réussie en base de données.");
+            } else {
+                System.out.println("SERVICE DEBUG: Échec de l'inscription (Email peut-être déjà utilisé).");
+            }
+
+        } catch (SQLException e) {
+            System.err.println("SERVICE ERROR: Erreur SQL lors de l'inscription.");
+            e.printStackTrace();
+        } catch (Exception e) {
+            System.err.println("SERVICE ERROR: Erreur inattendue dans le Service.");
+            e.printStackTrace();
+        } 
+        
+        return isCreated;
+    }
 
     /**
      * Logique de Sécurité : Génère un Token JWT unique.
