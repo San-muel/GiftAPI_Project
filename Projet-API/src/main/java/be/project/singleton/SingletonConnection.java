@@ -1,4 +1,4 @@
-package be.project.singleton; // Adaptez le package selon votre structure
+package be.project.singleton;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -6,42 +6,42 @@ import java.sql.SQLException;
 
 public class SingletonConnection {
 
-    // 1. La variable statique qui contient l'unique instance de la connexion
     private static Connection connection;
+    
+    private static final String HOST = "193.190.64.10";
+    private static final String PORT = "1522";
+    private static final String SERVICE = "XEPDB1";
+    private static final String USER = "STUDENT03_12";
+    private static final String PASS = "changeme";
+    private static final String URL = "jdbc:oracle:thin:@//" + HOST + ":" + PORT + "/" + SERVICE;
 
-    // 2. Le bloc static s'exécute une seule fois au chargement de la classe
     static {
         try {
-            // A. Chargement du Driver Oracle
-            // Pour ojdbc11 (moderne) ou ojdbc6
             Class.forName("oracle.jdbc.OracleDriver");
-
-            // B. Paramètres récupérés de votre image
-            String host = "193.190.64.10";
-            String port = "1522";           // Attention, ce n'est pas le standard 1521
-            String service = "XEPDB1";      // Nom de service (et non SID)
-            String user = "STUDENT03_12";
-            String password = "changeme";
-
-            // C. Construction de l'URL JDBC
-            // Syntaxe pour "Nom de Service" : jdbc:oracle:thin:@//host:port/service
-            String url = "jdbc:oracle:thin:@//" + host + ":" + port + "/" + service;
-
-            // D. Création de la connexion
-            connection = DriverManager.getConnection(url, user, password);
-            System.out.println("Connexion à Oracle réussie !");
-
         } catch (ClassNotFoundException e) {
-            System.err.println("Erreur : Driver Oracle introuvable. Vérifiez le pom.xml.");
-            e.printStackTrace();
-        } catch (SQLException e) {
-            System.err.println("Erreur : Impossible de se connecter à la base.");
-            e.printStackTrace();
+            System.err.println("Driver Oracle introuvable !");
         }
     }
 
-    // 3. Méthode pour récupérer la connexion depuis n'importe où dans le projet
-    public static Connection getConnection() {
+    /**
+     * Retourne la connexion existante ou en crée une nouvelle.
+     * Désactive l'auto-commit pour permettre les commits manuels dans le DAO.
+     */
+    public static synchronized Connection getConnection() {
+        try {
+            // Vérification si la connexion est valide (timeout de 2 secondes)
+            if (connection == null || connection.isClosed() || !connection.isValid(2)) {
+                System.out.println("DEBUG: Ouverture d'une nouvelle connexion Oracle...");
+                connection = DriverManager.getConnection(URL, USER, PASS);
+                
+                // --- LA CORRECTION EST ICI ---
+                // On désactive l'auto-commit pour autoriser conn.commit() dans le DAO
+                connection.setAutoCommit(false); 
+            }
+        } catch (SQLException e) {
+            System.err.println("CRITICAL ERROR: Impossible de reconnecter Oracle.");
+            e.printStackTrace();
+        }
         return connection;
     }
 }

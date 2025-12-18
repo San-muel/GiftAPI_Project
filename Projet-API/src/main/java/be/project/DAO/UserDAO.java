@@ -86,7 +86,6 @@ public class UserDAO extends AbstractDAO<User> {
         if (wishlist == null || wishlist.getId() == 0) return;
 
         String sql = "{call pkg_wishlist_data.get_gifts(?, ?)}";
-        
         int giftCount = 0;
 
         try (CallableStatement cs = connection.prepareCall(sql)) {
@@ -103,7 +102,6 @@ public class UserDAO extends AbstractDAO<User> {
                     gift.setDescription(rs.getString("DESCRIPTION"));
                     gift.setPrice(rs.getDouble("PRICE"));
                     
-                    // Gérer l'Integer Priority qui peut être NULL en base
                     int priorityValue = rs.getInt("PRIORITY");
                     if (!rs.wasNull()) {
                          gift.setPriority(priorityValue);
@@ -112,19 +110,15 @@ public class UserDAO extends AbstractDAO<User> {
                     }
                     
                     gift.setPhotoUrl(rs.getString("PHOTO_URL"));
-                    gift.setwishlist(wishlist); 
                     
                     wishlist.getGifts().add(gift); 
                     giftCount++;
-                    
-                    System.out.println("DAO DEBUG: Gift chargé pour Wishlist " + wishlist.getId() + " -> " + gift.getName());
                 }
             }
         } catch (SQLException e) {
             System.err.println("DAO ERROR: Erreur lors du chargement des Gifts pour la Wishlist " + wishlist.getId());
             e.printStackTrace();
         }
-        System.out.println("DAO DEBUG: " + giftCount + " Gifts chargés pour Wishlist " + wishlist.getId());
     }
     
     //----------------------------------------------------------------------

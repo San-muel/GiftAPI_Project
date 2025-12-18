@@ -1,12 +1,15 @@
 package be.project.model;
 
+import be.project.DAO.UserDAO;
+import be.project.singleton.SingletonConnection;
 import java.io.Serializable;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
 public class User implements Serializable {
-
     private static final long serialVersionUID = 5297121229532248788L;
     private int id;
     private String username;
@@ -14,47 +17,61 @@ public class User implements Serializable {
     private String psw;
     private String token; 
     
-    // On utilise exactement les mêmes noms de champs que ceux attendus par le Client
     private Set<Contribution> contributions = new HashSet<>();
-    private Set<Wishlist> sharedWishlists = new HashSet<>();   // Corrigé
-    private Set<Wishlist> createdWishlists = new HashSet<>();  // Corrigé
-    private Set<SharedWishlist> sharedWishlistInfos = new HashSet<>(); // Corrigé
-    private Set<SharedWishlist> infoWishlist = new HashSet<>(); // Ajouté pour compatibilité
+    private Set<Wishlist> sharedWishlists = new HashSet<>();   
+    private Set<Wishlist> createdWishlists = new HashSet<>();  
+    private Set<SharedWishlist> sharedWishlistInfos = new HashSet<>(); 
 
     public User() {}
-    
-    // --- Getters et Setters standard (Noms alignés sur les variables) ---
 
+    // --- Méthodes Active Record (Anciennement dans UserService) ---
+
+    public static User authenticate(String email, String psw) throws SQLException {
+        try (Connection conn = SingletonConnection.getConnection()) {
+            if (conn == null) return null;
+            
+            UserDAO userDAO = new UserDAO(conn);
+            User user = userDAO.authenticate(email, psw);
+            
+            if (user != null) {
+                user.setToken(user.generateJwtToken());
+            }
+            return user;
+        }
+    }
+
+    public boolean register() throws SQLException {
+        try (Connection conn = SingletonConnection.getConnection()) {
+            if (conn == null) return false;
+            
+            UserDAO userDAO = new UserDAO(conn);
+            return userDAO.create(this);
+        }
+    }
+
+    /**
+     * Génère un Token JWT (Logique de sécurité déplacée dans le modèle)
+     */
+    public String generateJwtToken() {
+        String payload = this.id + ":" + this.email + ":" + System.currentTimeMillis();
+        return "fake-jwt-token-" + payload;
+    }
+
+    // --- Getters et Setters ---
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
-
     public String getUsername() { return username; }
     public void setUsername(String username) { this.username = username; }
-
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
-
     public String getPsw() { return psw; }
     public void setPsw(String psw) { this.psw = psw; }
-
     public String getToken() { return token; }
     public void setToken(String token) { this.token = token; }
-
-    public Set<Contribution> getContributions() { return contributions; }
-    public void setContributions(Set<Contribution> contributions) { this.contributions = contributions; }
-
-    public Set<Wishlist> getSharedWishlists() { return sharedWishlists; }
-    public void setSharedWishlists(Set<Wishlist> sharedWishlists) { this.sharedWishlists = sharedWishlists; }
-
     public Set<Wishlist> getCreatedWishlists() { return createdWishlists; }
-    public void setCreatedWishlists(Set<Wishlist> createdWishlists) { this.createdWishlists = createdWishlists; }
-
+    public Set<Wishlist> getSharedWishlists() { return sharedWishlists; }
     public Set<SharedWishlist> getSharedWishlistInfos() { return sharedWishlistInfos; }
-    public void setSharedWishlistInfos(Set<SharedWishlist> sharedWishlistInfos) { this.sharedWishlistInfos = sharedWishlistInfos; }
-
-    public Set<SharedWishlist> getInfoWishlist() { return infoWishlist; }
-    public void setInfoWishlist(Set<SharedWishlist> infoWishlist) { this.infoWishlist = infoWishlist; }
-
+    
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -64,7 +81,5 @@ public class User implements Serializable {
     }
 
     @Override
-    public int hashCode() {
-        return Objects.hash(id);
-    }
+    public int hashCode() { return Objects.hash(id); }
 }

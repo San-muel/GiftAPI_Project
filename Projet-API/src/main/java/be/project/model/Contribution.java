@@ -9,9 +9,6 @@ import java.util.Set;
 
 import be.project.DAO.AbstractDAOFactory;
 import be.project.DAO.DAO;
-// Les imports be.project.DAO.ContributionDAO et be.project.singleton.SingletonConnection
-// ne sont plus nécessaires car l'accès est délégué à la Factory.
-
 public class Contribution implements Serializable {
 
 	private static final long serialVersionUID = -1788323929082771022L;
@@ -19,18 +16,16 @@ public class Contribution implements Serializable {
     private double amount;
     private LocalDateTime contributedAt;
     private String comment;
-    private Gift gift;
     private Set<User> users = new HashSet<>();
     
     public Contribution() {}
 
-    public Contribution(int id, double amount, LocalDateTime contributedAt, String comment, Gift gift) {
+    public Contribution(int id, double amount, LocalDateTime contributedAt, String comment) {
         this();
         this.id = id;
         this.amount = amount;
         this.contributedAt = contributedAt;
         this.comment = comment;
-        this.gift = gift;
     }
 
     public int getId() {
@@ -68,14 +63,6 @@ public class Contribution implements Serializable {
         this.comment = comment;
     }
 
-    public Gift getGift() {
-        return gift;
-    }
-
-    public void setGift(Gift gift) {
-        this.gift = gift;
-    }
-
     public Set<User> getUsers() {
         return users;
     }
@@ -95,7 +82,6 @@ public class Contribution implements Serializable {
                 ", amount=" + amount +
                 ", contributedAt=" + contributedAt +
                 ", comment='" + comment + '\'' +
-                ", giftId=" + (gift != null ? gift.getId() : "null") +
                 '}';
     }
 
