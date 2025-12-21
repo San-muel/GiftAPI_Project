@@ -1,21 +1,25 @@
 package be.project.api;
 
 import org.glassfish.jersey.server.ResourceConfig;
-
+import org.glassfish.jersey.jackson.JacksonFeature; // Import explicite c'est mieux
 import javax.ws.rs.ApplicationPath;
 
 @ApplicationPath("/api")
-public class Root extends ResourceConfig {   // ← ResourceConfig, pas Application
+public class Root extends ResourceConfig { 
 
     public Root() {
-        // Enregistrement de tes ressources
+        // --- TES RESSOURCES ---
         register(UserAPI.class);
         register(GiftAPI.class);
-        register(HelpMethode.class); // si c'est un @Provider
 
-        // ACTIVATION DU SUPPORT JSON JACKSON (c'est ÇA qui manquait !!)
-        register(org.glassfish.jersey.jackson.JacksonFeature.class);
+        register(WishlistAPI.class); 
 
-        System.out.println("ROOT: ResourceConfig initialisée – JacksonFeature activé !");
+        register(HelpMethode.class); 
+
+        // --- CONFIGURATION ---
+        // Activation du support JSON
+        register(JacksonFeature.class);
+
+        System.out.println("ROOT: ResourceConfig initialisée. WishlistAPI est enregistrée !");
     }
 }
