@@ -194,13 +194,77 @@ public class WishlistDAO extends AbstractDAO<Wishlist> {
         }
         return wishlists;
     }
+ // Dans WishlistDAO.java (Serveur)
+
+    @Override
+    public List<Wishlist> findAll() {
+        List<Wishlist> list = new ArrayList<>();
+        String sql = "{call pkg_wishlist_data.get_all_wishlists(?)}"; 
+
+        // Utilisation correcte du try-with-resources pour la connexion
+        try (Connection conn = getActiveConnection();
+             CallableStatement call = conn.prepareCall(sql)) {
+            
+            call.registerOutParameter(1, OracleTypes.CURSOR); 
+            call.execute();
+
+            try (ResultSet rs = (ResultSet) call.getObject(1)) {
+                while (rs.next()) {
+                    Wishlist w = new Wishlist();
+                    // Attention à bien utiliser l'alias défini dans le PL/SQL
+                    w.setId(rs.getInt("WISHLIST_ID")); 
+                    w.setTitle(rs.getString("TITLE"));
+                    w.setOccasion(rs.getString("OCCASION"));
+                    
+                    java.sql.Date dbDate = rs.getDate("EXPIRATION_DATE");
+                    if (dbDate != null) {
+                        w.setExpirationDate(dbDate.toLocalDate());
+                    }
+                    
+                    String statusStr = rs.getString("STATUS");
+                    if (statusStr != null) {
+                        try {
+                            w.setStatus(Status.valueOf(statusStr));
+                        } catch (IllegalArgumentException ex) {
+                            w.setStatus(Status.ACTIVE);
+                        }
+                    }
+                    list.add(w);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("[ERREUR DAO SERVEUR] findAll: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return list;
+    }
+    
+    private Wishlist map(ResultSet rs) throws SQLException {
+        Wishlist w = new Wishlist();
+        w.setId(rs.getInt("ID"));
+        w.setTitle(rs.getString("TITLE"));
+        w.setOccasion(rs.getString("OCCASION"));
+
+        if (rs.getDate("EXPIRATION_DATE") != null) {
+            w.setExpirationDate(rs.getDate("EXPIRATION_DATE").toLocalDate());
+        }
+
+        String statusStr = rs.getString("STATUS");
+        if (statusStr != null) {
+            try {
+                w.setStatus(Status.valueOf(statusStr.toUpperCase()));
+            } catch (IllegalArgumentException e) {
+                w.setStatus(Status.INACTIVE); // Valeur par défaut
+            }
+        }
+        return w;
+    }
 
     // --- Méthodes de l'AbstractDAO non utilisées directement ---
     // On doit les laisser car on étend AbstractDAO, mais on retourne null/false
     // car on a besoin du userId pour toutes nos opérations réelles.
     
     @Override public Wishlist find(int id) { return null; }
-    @Override public List<Wishlist> findAll() { return new ArrayList<>(); }
     @Override public boolean delete(Wishlist obj) { return false; } 
     @Override public boolean update(Wishlist obj) { return false; }
     @Override public boolean create(Wishlist obj) { return false; }

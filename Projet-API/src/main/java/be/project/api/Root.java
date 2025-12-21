@@ -1,24 +1,20 @@
 package be.project.api;
 
 import org.glassfish.jersey.server.ResourceConfig;
-import org.glassfish.jersey.jackson.JacksonFeature; 
 import javax.ws.rs.ApplicationPath;
 
 @ApplicationPath("/api")
-public class Root extends ResourceConfig { 
+public class Root extends ResourceConfig {
 
     public Root() {
-        // --- ENREGISTREMENT EXPLICITE DES RESSOURCES ---
-        // C'est plus sûr que le scan automatique pour éviter les erreurs 404
-        register(UserAPI.class);
-        register(GiftAPI.class);
-        register(WishlistAPI.class); // Indispensable pour que la création de liste fonctionne
-        register(HelpMethode.class); 
+        // --- SCAN AUTOMATIQUE ---
+        // Jersey va scanner récursivement ce package pour trouver 
+        // toutes les classes annotées avec @Path
+        packages("be.project.api"); 
 
-        // --- CONFIGURATION ---
-        // Activation du support JSON pour Jackson
-        register(JacksonFeature.class);
+        // ACTIVATION DU SUPPORT JSON JACKSON
+        register(org.glassfish.jersey.jackson.JacksonFeature.class);
 
-        System.out.println("ROOT: ResourceConfig initialisée. WishlistAPI est enregistrée !");
+        System.out.println("ROOT: ResourceConfig initialisée avec SCAN AUTOMATIQUE !");
     }
 }

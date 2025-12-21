@@ -1,7 +1,11 @@
 package be.project.model;
 
 import be.project.DAO.WishlistDAO;
+import be.project.singleton.SingletonConnection;
+
 import java.io.Serializable;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.List;
@@ -145,4 +149,15 @@ public class Wishlist implements Serializable {
     public int hashCode() {
         return Objects.hash(id);
     }
+    
+// Dans Wishlist.java (Serveur)
+    
+    /**
+     * Récupère toutes les listes de la base de données (Sans filtre user).
+     */
+    public static List<Wishlist> findAll() {
+        WishlistDAO dao = new WishlistDAO();
+        return dao.findAll(); // Appelle la méthode du DAO Serveur ci-dessous
+    }
+    
 }
