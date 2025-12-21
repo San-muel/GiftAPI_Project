@@ -1,10 +1,16 @@
 package be.project.model;
 
 import java.io.Serializable;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+
+import be.project.DAO.WishlistDAO;
+import be.project.singleton.SingletonConnection;
 
 public class Wishlist implements Serializable {
 
@@ -73,6 +79,14 @@ public class Wishlist implements Serializable {
 
     public void setGifts(Set<Gift> gifts) {
         this.gifts = gifts;
+    }
+    
+    public static List<Wishlist> findAll() throws SQLException {
+        try (Connection conn = SingletonConnection.getConnection()) {
+            if (conn == null) return List.of();
+            WishlistDAO dao = new WishlistDAO(conn);
+            return dao.findAll();
+        }
     }
     
     @Override

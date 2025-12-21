@@ -1,21 +1,20 @@
 package be.project.api;
 
 import org.glassfish.jersey.server.ResourceConfig;
-
 import javax.ws.rs.ApplicationPath;
 
 @ApplicationPath("/api")
-public class Root extends ResourceConfig {   // ← ResourceConfig, pas Application
+public class Root extends ResourceConfig {
 
     public Root() {
-        // Enregistrement de tes ressources
-        register(UserAPI.class);
-        register(GiftAPI.class);
-        register(HelpMethode.class); // si c'est un @Provider
+        // --- SCAN AUTOMATIQUE ---
+        // Jersey va scanner récursivement ce package pour trouver 
+        // toutes les classes annotées avec @Path
+        packages("be.project.api"); 
 
-        // ACTIVATION DU SUPPORT JSON JACKSON (c'est ÇA qui manquait !!)
+        // ACTIVATION DU SUPPORT JSON JACKSON
         register(org.glassfish.jersey.jackson.JacksonFeature.class);
 
-        System.out.println("ROOT: ResourceConfig initialisée – JacksonFeature activé !");
+        System.out.println("ROOT: ResourceConfig initialisée avec SCAN AUTOMATIQUE !");
     }
 }

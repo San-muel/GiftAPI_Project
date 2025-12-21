@@ -20,6 +20,8 @@ public class UserDAO extends AbstractDAO<User> {
         super(connection);
     }
 
+    
+    
     /**
      * Authentification de l'utilisateur et hydratation complète de l'objet User.
      * Appelle pkg_user_auth.authenticate.
@@ -282,7 +284,22 @@ public class UserDAO extends AbstractDAO<User> {
 
     @Override
     public List<User> findAll() {
-        // Logique de recherche de tous les utilisateurs (à implémenter)
-        return null;
+        List<User> users = new java.util.ArrayList<>();
+        // ATTENTION : Utilise "User" avec guillemets si c'est ainsi qu'elle est créée en BD
+        String sql = "SELECT ID, USERNAME, EMAIL FROM \"User\" ORDER BY USERNAME";
+        
+        try (java.sql.PreparedStatement ps = connection.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                User u = new User();
+                u.setId(rs.getInt("ID")); // Oracle renvoie souvent les noms en majuscules
+                u.setUsername(rs.getString("USERNAME"));
+                u.setEmail(rs.getString("EMAIL"));
+                users.add(u);
+            }
+        } catch (SQLException e) {
+            System.err.println("DAO ERROR UserDAO.findAll: " + e.getMessage());
+        }
+        return users;
     }
 }

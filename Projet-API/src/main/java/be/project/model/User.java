@@ -6,6 +6,7 @@ import java.io.Serializable;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
@@ -49,6 +50,14 @@ public class User implements Serializable {
         }
     }
 
+    public static List<User> getAllUsers() throws SQLException {
+        try (Connection conn = SingletonConnection.getConnection()) {
+            if (conn == null) return List.of();
+            
+            UserDAO userDAO = new UserDAO(conn);
+            return userDAO.findAll(); // Appelle le DAO pour récupérer la liste
+        }
+    }
     /**
      * Génère un Token JWT (Logique de sécurité déplacée dans le modèle)
      */
