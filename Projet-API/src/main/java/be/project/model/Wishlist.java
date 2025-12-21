@@ -1,38 +1,39 @@
 package be.project.model;
 
+import be.project.DAO.WishlistDAO;
 import java.io.Serializable;
-import java.sql.Connection;
-import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
-import be.project.DAO.WishlistDAO;
-import be.project.singleton.SingletonConnection;
-
 public class Wishlist implements Serializable {
 
-	private static final long serialVersionUID = 7031345627323684647L;
-	private int id;
+    private static final long serialVersionUID = 7031345627323684647L;
+    private int id;
     private String title;
     private String occasion;         
     private LocalDate expirationDate;
     private Status status; 
     private Set<Gift> gifts = new HashSet<>();
     
+    // --- Constructeurs ---
+    
     public Wishlist() {}
     
     public Wishlist(int id, String title, String occasion, LocalDate expirationDate,
-    			Status  status, User owner) {
-		this();
-		this.id = id;
-		this.title = title;
-		this.occasion = occasion;
-		this.expirationDate = expirationDate;
-		this.status = status;
-	}
+                Status status) {
+        this();
+        this.id = id;
+        this.title = title;
+        this.occasion = occasion;
+        this.expirationDate = expirationDate;
+        this.status = status;
+    }
+    
+    // --- Getters & Setters ---
+
     public int getId() {
         return id;
     }
@@ -65,7 +66,7 @@ public class Wishlist implements Serializable {
         this.expirationDate = expirationDate;
     }
 
-    public Status  getStatus() {
+    public Status getStatus() {
         return status;
     }
 
@@ -81,14 +82,46 @@ public class Wishlist implements Serializable {
         this.gifts = gifts;
     }
     
-    public static List<Wishlist> findAll() throws SQLException {
-        try (Connection conn = SingletonConnection.getConnection()) {
-            if (conn == null) return List.of();
-            WishlistDAO dao = new WishlistDAO(conn);
-            return dao.findAll();
-        }
+    // --- Méthodes Métier (CRUD via DAO) ---
+    // Ces méthodes font le lien entre l'API et le DAO
+
+    /**
+     * Récupère toutes les listes d'un utilisateur spécifique.
+     */
+    public static List<Wishlist> getAllForUser(int userId) {
+        WishlistDAO dao = new WishlistDAO();
+        return dao.findAllByUserId(userId);
     }
-    
+
+    /**
+     * Crée la liste actuelle en base de données pour l'utilisateur donné.
+     * @return L'objet Wishlist complet avec l'ID généré.
+     */
+    public Wishlist create(int userId) {
+        WishlistDAO dao = new WishlistDAO();
+        return dao.create(this, userId);
+    }
+
+    /**
+     * Met à jour la liste actuelle en base de données.
+     * @return true si succès.
+     */
+    public boolean update(int userId) {
+        WishlistDAO dao = new WishlistDAO();
+        return dao.update(this, userId);
+    }
+
+    /**
+     * Supprime la liste actuelle de la base de données.
+     * @return true si succès.
+     */
+    public boolean delete(int userId) {
+        WishlistDAO dao = new WishlistDAO();
+        return dao.delete(this.getId(), userId);
+    }
+
+    // --- Overrides ---
+
     @Override
     public String toString() {
         return "Wishlist{" +
@@ -96,7 +129,7 @@ public class Wishlist implements Serializable {
                 ", title='" + title + '\'' +
                 ", occasion='" + occasion + '\'' +
                 ", status='" + status + '\'' +
-                ", nbGifts=" + gifts.size() +
+                ", nbGifts=" + (gifts != null ? gifts.size() : 0) +
                 '}';
     }
 
