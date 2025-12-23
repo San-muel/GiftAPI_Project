@@ -241,7 +241,10 @@ public class WishlistDAO extends AbstractDAO<Wishlist> {
     
     private Wishlist map(ResultSet rs) throws SQLException {
         Wishlist w = new Wishlist();
-        w.setId(rs.getInt("ID"));
+        
+        // CORRECTION ICI : Utiliser WISHLIST_ID au lieu de ID
+        w.setId(rs.getInt("WISHLIST_ID")); 
+        
         w.setTitle(rs.getString("TITLE"));
         w.setOccasion(rs.getString("OCCASION"));
 
@@ -254,7 +257,7 @@ public class WishlistDAO extends AbstractDAO<Wishlist> {
             try {
                 w.setStatus(Status.valueOf(statusStr.toUpperCase()));
             } catch (IllegalArgumentException e) {
-                w.setStatus(Status.INACTIVE); // Valeur par défaut
+                w.setStatus(Status.ACTIVE); 
             }
         }
         return w;
@@ -264,7 +267,48 @@ public class WishlistDAO extends AbstractDAO<Wishlist> {
     // On doit les laisser car on étend AbstractDAO, mais on retourne null/false
     // car on a besoin du userId pour toutes nos opérations réelles.
     
-    @Override public Wishlist find(int id) { return null; }
+ // Dans be.project.DAO.WishlistDAO (Côté API)
+
+ // Dans be.project.DAO.WishlistDAO (Côté API / Serveur)
+
+    @Override
+    public Wishlist find(int id) {
+        Wishlist wishlist = null;
+        
+        // On appelle la procédure qui renvoie les infos de la table WISHLIST pour cet ID
+        String sql = "{call pkg_wishlist_data.get_wishlist_by_id(?, ?)}";
+
+        try (Connection conn = getActiveConnection();
+             CallableStatement cs = conn.prepareCall(sql)) {
+
+            cs.setInt(1, id);
+            cs.registerOutParameter(2, OracleTypes.CURSOR);
+            
+            System.out.println("[API DAO] Recherche de la wishlist ID : " + id);
+            cs.execute();
+
+            try (ResultSet rs = (ResultSet) cs.getObject(2)) {
+                if (rs.next()) {
+                    // On utilise ta méthode map(rs) existante pour transformer la ligne en objet Wishlist
+                    wishlist = map(rs); 
+                    
+                    // --- RÉCUPÉRATION DES CADEAUX (Gifts) ---
+                    // Très important : On instancie le GiftDAO en lui passant la connexion actuelle
+                    // pour récupérer tous les cadeaux liés à WISHLIST_ID = id.
+                    GiftDAO giftDAO = new GiftDAO(conn);
+                    wishlist.setGifts(giftDAO.findAllByWishlistId(id));
+                    
+                    System.out.println("[API DAO] Wishlist trouvée : " + wishlist.getTitle() + 
+                                       " avec " + wishlist.getGifts().size() + " cadeaux.");
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("[ERREUR DAO SERVEUR] Exception dans find(id): " + e.getMessage());
+            e.printStackTrace();
+        }
+        return wishlist;
+    }
+    
     @Override public boolean delete(Wishlist obj) { return false; } 
     @Override public boolean update(Wishlist obj) { return false; }
     @Override public boolean create(Wishlist obj) { return false; }

@@ -131,4 +131,30 @@ public class WishlistAPI {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
         }
     }
+	 // ==========================================
+	 // GET : Récupérer une liste précise par son ID
+	 // URL : /api/wishlists/{id}
+	 // ==========================================
+	 @GET
+	 @Path("/{id}")
+	 @Produces(MediaType.APPLICATION_JSON)
+	 public Response getWishlistById(@PathParam("id") int id) {
+	     System.out.println("[DEBUG SERVEUR API] Demande de détails pour la liste ID : " + id);
+	
+	     try {
+	         // APPEL ACTIVE RECORD : Le modèle cherche en DB via le DAO
+	         Wishlist wishlist = Wishlist.find(id);
+	
+	         if (wishlist != null) {
+	             return Response.ok(objectMapper.writeValueAsString(wishlist)).build();
+	         } else {
+	             return Response.status(Response.Status.NOT_FOUND)
+	                            .entity("{\"error\":\"Wishlist non trouvée\"}")
+	                            .build();
+	         }
+	     } catch (Exception e) {
+	         e.printStackTrace();
+	         return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+	     }
+	 }
 }

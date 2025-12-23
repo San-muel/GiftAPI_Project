@@ -231,34 +231,34 @@ public class UserDAO extends AbstractDAO<User> {
     
     @Override
     public boolean create(User user) {
-        // Appel de la procédure stockée via le package
+        // On repasse à 5 points d'interrogation
         String sql = "{call pkg_user_auth.register_user(?, ?, ?, ?, ?)}";
+        System.out.println("[API-DAO] Appel procédure d'inscription (Originale) pour " + user.getEmail());
 
         try (CallableStatement cs = connection.prepareCall(sql)) {
-            // Paramètres d'entrée (IN)
+            // Paramètres IN
             cs.setString(1, user.getUsername());
             cs.setString(2, user.getEmail().trim().toLowerCase());
-            cs.setString(3, user.getPsw()); // Le mot de passe en clair
+            cs.setString(3, user.getPsw());
 
-            // Paramètres de sortie (OUT)
-            cs.registerOutParameter(4, Types.VARCHAR); // p_success
-            cs.registerOutParameter(5, Types.VARCHAR); // p_error_msg
+            // Paramètres OUT (Comme avant)
+            cs.registerOutParameter(4, java.sql.Types.VARCHAR); // p_success
+            cs.registerOutParameter(5, java.sql.Types.VARCHAR); // p_error_msg
 
             cs.execute();
-
+            
             String successStr = cs.getString(4);
             String errorMsg = cs.getString(5);
 
             if ("TRUE".equalsIgnoreCase(successStr)) {
-                System.out.println("DAO DEBUG: Inscription réussie pour " + user.getEmail());
+                System.out.println("[API-DAO] Inscription réussie (Note: ID non récupéré)");
                 return true;
             } else {
-                System.err.println("DAO DEBUG: Échec inscription : " + errorMsg);
+                System.err.println("[API-DAO] Échec procédure : " + errorMsg);
                 return false;
             }
-
         } catch (SQLException e) {
-            System.err.println("DAO ERROR: Erreur lors de l'appel à pkg_user_auth.register_user");
+            System.err.println("[API-DAO] Erreur SQL : " + e.getMessage());
             e.printStackTrace();
             return false;
         }

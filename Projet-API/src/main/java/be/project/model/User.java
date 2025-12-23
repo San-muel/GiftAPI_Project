@@ -18,6 +18,7 @@ public class User implements Serializable {
     private String psw;
     private String token; 
     
+    
     private Set<Contribution> contributions = new HashSet<>();
     private Set<Wishlist> sharedWishlists = new HashSet<>();   
     private Set<Wishlist> createdWishlists = new HashSet<>();  
@@ -42,11 +43,18 @@ public class User implements Serializable {
     }
 
     public boolean register() throws SQLException {
+        System.out.println("[API-MODEL] Tentative d'obtention de la connexion DB...");
         try (Connection conn = SingletonConnection.getConnection()) {
-            if (conn == null) return false;
-            
+            if (conn == null) {
+                System.err.println("[API-MODEL] ÉCHEC : La connexion DB est NULL !");
+                return false;
+            }
+            System.out.println("[API-MODEL] Connexion DB obtenue avec succès.");
             UserDAO userDAO = new UserDAO(conn);
             return userDAO.create(this);
+        } catch (SQLException e) {
+            System.err.println("[API-MODEL] Erreur SQL : " + e.getMessage());
+            throw e;
         }
     }
 

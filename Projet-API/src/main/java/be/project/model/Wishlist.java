@@ -137,6 +137,11 @@ public class Wishlist implements Serializable {
                 '}';
     }
 
+    public static Wishlist find(int id) {
+        WishlistDAO dao = new WishlistDAO();
+        return dao.find(id); 
+    }
+    
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

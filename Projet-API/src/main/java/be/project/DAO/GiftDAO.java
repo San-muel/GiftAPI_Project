@@ -124,6 +124,45 @@ public class GiftDAO extends AbstractDAO<Gift> {
         } catch (SQLException e) { e.printStackTrace(); }
         return gifts;
     }
+    
+    /**
+     * Récupère tous les cadeaux d'une liste spécifique via un curseur Oracle.
+     * Utilisé par WishlistDAO.find(id) pour peupler la liste de cadeaux.
+     */
+    public java.util.Set<Gift> findAllByWishlistId(int wishlistId) {
+        java.util.Set<Gift> gifts = new java.util.HashSet<>();
+        // Procédure PL/SQL pour récupérer les cadeaux d'une wishlist
+        String sql = "{call pkg_gift_data.get_gifts_by_wishlist(?, ?)}";
+
+        try (Connection conn = getActiveConnection();
+             CallableStatement cs = conn.prepareCall(sql)) {
+
+            cs.setInt(1, wishlistId);
+            cs.registerOutParameter(2, OracleTypes.CURSOR);
+            
+            System.out.println("[API GiftDAO] Chargement des cadeaux pour la wishlist : " + wishlistId);
+            cs.execute();
+
+            try (ResultSet rs = (ResultSet) cs.getObject(2)) {
+                while (rs.next()) {
+                    Gift g = new Gift();
+                    // On utilise les noms de colonnes de ta table GIFT
+                    g.setId(rs.getInt("ID")); 
+                    g.setName(rs.getString("NAME"));
+                    g.setDescription(rs.getString("DESCRIPTION"));
+                    g.setPrice(rs.getDouble("PRICE"));
+                    g.setPriority(rs.getInt("PRIORITY"));
+                    g.setPhotoUrl(rs.getString("PHOTO_URL"));             
+                    gifts.add(g);
+                }
+            }
+            System.out.println("[API GiftDAO] Nombre de cadeaux récupérés : " + gifts.size());
+        } catch (SQLException e) {
+            System.err.println("[ERREUR API GiftDAO] findAllByWishlistId: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return gifts;
+    }
 
     @Override public Gift find(int id) { return null; }
     @Override public List<Gift> findAll() { return new ArrayList<>(); }
