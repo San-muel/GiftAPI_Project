@@ -13,6 +13,8 @@ public class Contribution implements Serializable {
 
 	private static final long serialVersionUID = -1788323929082771022L;
 	private int id;
+	private int userId; 
+    private int giftId;
     private double amount;
     private LocalDateTime contributedAt;
     private String comment;
@@ -74,6 +76,22 @@ public class Contribution implements Serializable {
     public void addUser(User user) {
         this.users.add(user);
     }
+    
+	public int getUserId() {
+		return userId;
+	}
+
+	public void setUserId(int userId) {
+		this.userId = userId;
+	}
+
+	public int getGiftId() {
+		return giftId;
+	}
+
+	public void setGiftId(int giftId) {
+		this.giftId = giftId;
+	}
 
     @Override
     public String toString() {
@@ -121,6 +139,10 @@ public class Contribution implements Serializable {
         // Le Modèle appelle la méthode utilitaire qui utilise la Factory
         DAO<Contribution> dao = getContributionDAO();
         return dao.find(id);
+    }
+    public boolean save() {
+        // getContributionDAO() utilise ta Factory JDBC pour obtenir le DAO
+        return getContributionDAO().create(this);
     }
 
     public static List<Contribution> findAll() {

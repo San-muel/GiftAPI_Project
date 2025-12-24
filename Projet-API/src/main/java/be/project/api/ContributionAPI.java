@@ -37,4 +37,23 @@ public class ContributionAPI {
         
         return Response.ok(contributions).build();
     }
+    @POST
+    public Response create(Contribution contribution) {
+        System.out.println("API: Tentative de création d'une contribution pour le cadeau ID: " + contribution.getGiftId());
+
+        // 1. Appel de la méthode du modèle (Active Record)
+        // La méthode save() appellera le DAO qui exécutera la procédure Oracle
+        boolean success = contribution.save();
+
+        if (success) {
+            // On retourne 201 Created avec l'objet créé (qui contient maintenant son ID Oracle)
+            return Response.status(Response.Status.CREATED).entity(contribution).build();
+        } else {
+            // On retourne 400 Bad Request si la procédure Oracle a échoué 
+            // (ex: montant trop élevé par rapport au prix du cadeau)
+            return Response.status(Response.Status.BAD_REQUEST)
+                           .entity("Erreur : Impossible d'enregistrer la contribution. Le montant dépasse peut-être le prix restant.")
+                           .build();
+        }
+    }
 }

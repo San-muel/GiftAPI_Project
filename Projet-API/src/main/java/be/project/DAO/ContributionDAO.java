@@ -14,7 +14,24 @@ public class ContributionDAO extends AbstractDAO<Contribution> {
 
     @Override
     public boolean create(Contribution obj) {
-        return true;
+        // Note: On passe l'ID de l'user et du gift contenus dans l'objet Contribution
+        String sql = "{call PKG_CONTRIBUTION_DATA.add_contribution(?, ?, ?, ?, ?)}";
+        
+        try (CallableStatement cs = connection.prepareCall(sql)) {
+            cs.setInt(1, obj.getUserId());    // USER_ID
+            cs.setInt(2, obj.getGiftId());    // GIFT_ID
+            cs.setDouble(3, obj.getAmount()); // AMOUNT
+            cs.setString(4, obj.getComment());// COMMENT_TEXT
+            cs.registerOutParameter(5, Types.INTEGER); // p_status_code
+
+            cs.execute();
+            
+            return cs.getInt(5) == 1; // Retourne true si status_code est 1
+            
+        } catch (SQLException e) {
+            System.err.println("Erreur SQL lors de l'appel de la procédure: " + e.getMessage());
+            return false;
+        }
     }
 
     @Override
