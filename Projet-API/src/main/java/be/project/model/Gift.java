@@ -118,4 +118,17 @@ public class Gift implements Serializable {
         
         return GiftStatus.AVAILABLE; 
     }
+    public double getCollectedAmount() {
+        if (contributions == null || contributions.isEmpty()) {
+            return 0.0;
+        }
+        // Somme des montants
+        return contributions.stream()
+                            .mapToDouble(Contribution::getAmount)
+                            .sum();
+    }
+    public double getRemainingAmount() {
+        double remaining = this.price - getCollectedAmount();
+        return Math.max(0, remaining); // Empêche les nombres négatifs
+    }
 }
