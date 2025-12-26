@@ -150,5 +150,11 @@ public class Contribution implements Serializable {
         DAO<Contribution> dao = getContributionDAO();
         return dao.findAll();
     }
+    
+    public static List<Contribution> findAllByGiftId(int giftId) {
+        // On suppose que SingletonConnection est géré dans le DAO
+        be.project.DAO.ContributionDAO dao = new be.project.DAO.ContributionDAO(be.project.singleton.SingletonConnection.getConnection());
+        return dao.findAllByGiftId(giftId);
+    }
 
 }
