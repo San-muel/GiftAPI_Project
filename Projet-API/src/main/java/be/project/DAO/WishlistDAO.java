@@ -54,28 +54,51 @@ public class WishlistDAO extends AbstractDAO<Wishlist> {
     }
 
     // --- UPDATE (Ajouté pour le modèle) ---
+ // --- UPDATE (Version SERVEUR API avec Logs) ---
     public boolean update(Wishlist wishlist, int userId) {
-        // Assurez-vous que cette procédure existe dans PKG_WISHLIST_DATA
+        // La procédure attend 7 paramètres : id, user_id, titre, occasion, date, statut, out_status
         String sql = "{call pkg_wishlist_data.update_wishlist(?, ?, ?, ?, ?, ?, ?)}";
+        
+        System.out.println("[DB-SERVER] Tentative d'UPDATE SQL pour liste ID: " + wishlist.getId());
+        
         try (Connection conn = getActiveConnection();
              CallableStatement cs = conn.prepareCall(sql)) {
+            
             cs.setInt(1, wishlist.getId());
-            cs.setInt(2, userId);
+            cs.setInt(2, userId); // CREATOR_ID (Sécurité Oracle)
             cs.setString(3, wishlist.getTitle());
             cs.setString(4, wishlist.getOccasion());
+            
             if (wishlist.getExpirationDate() != null) {
                 cs.setDate(5, java.sql.Date.valueOf(wishlist.getExpirationDate()));
             } else {
-                cs.setNull(5, Types.DATE);
+                cs.setNull(5, java.sql.Types.DATE);
             }
-            cs.setString(6, wishlist.getStatus() != null ? wishlist.getStatus().name() : "ACTIVE");
-            cs.registerOutParameter(7, Types.INTEGER);
+
+            // CORRECTION ICI : wishlist.getStatus() est déjà une String
+            String statusValue = wishlist.getStatus() != null ? wishlist.getStatus().toString() : "ACTIVE";
+            cs.setString(6, statusValue);
+            
+            cs.registerOutParameter(7, java.sql.Types.INTEGER);
+
+            System.out.println("[DB-SERVER] Paramètres : User=" + userId + ", Status=" + statusValue);
+            
             cs.execute();
-            if (cs.getInt(7) == 1) {
+            
+            int result = cs.getInt(7);
+            System.out.println("[DB-SERVER] Résultat Procédure (p_status_out) : " + result);
+
+            if (result >= 1) { // 1 ou plus signifie qu'une ligne a été modifiée
                 conn.commit();
+                System.out.println("[DB-SERVER] Update réussi et committé.");
                 return true;
+            } else {
+                System.err.println("[DB-SERVER] Update échoué : Aucune ligne trouvée ou UserID incorrect.");
             }
-        } catch (SQLException e) { e.printStackTrace(); }
+        } catch (SQLException e) { 
+            System.err.println("[DB-SERVER] ERREUR SQL : " + e.getMessage());
+            e.printStackTrace(); 
+        }
         return false;
     }
 

@@ -97,17 +97,42 @@ public class WishlistAPI {
     @Path("/{id}") 
     @Consumes(MediaType.APPLICATION_JSON)
     public Response modifyWishlist(@PathParam("id") int wishlistId, Wishlist wishlist, @Context HttpHeaders headers) {
+        // 1. Extraction et validation de l'utilisateur via le Token
         int userId = HelpMethode.validateAndExtractUserId(headers.getHeaderString(HttpHeaders.AUTHORIZATION));
-        if (userId == -1) return Response.status(Response.Status.UNAUTHORIZED).build();
+        
+        System.out.println("======= [API PUT] RECEPTION MODIFICATION =======");
+        System.out.println("[API] Wishlist ID à modifier : " + wishlistId);
+        System.out.println("[API] User ID extrait du token : " + userId);
+        
+        if (userId == -1) {
+            System.err.println("[API] Erreur : Token invalide ou utilisateur non autorisé.");
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
 
+        // 2. Préparation de l'objet métier
         wishlist.setId(wishlistId); 
+        System.out.println("[API] Nouveau titre reçu : " + wishlist.getTitle());
+        System.out.println("[API] Nouveau statut reçu : " + wishlist.getStatus());
         
         try {
+            // 3. Appel de la couche métier/DAO (côté serveur)
+            // C'est ici que la procédure Oracle PKG_WISHLIST_DATA.UPDATE_WISHLIST est appelée
+            System.out.println("[API] Tentative de mise à jour en base de données...");
             boolean success = wishlist.update(userId);
-            return success ? Response.noContent().build() : Response.status(Response.Status.FORBIDDEN).build();
+            
+            if (success) {
+                System.out.println("[API] SUCCÈS : La base de données a été mise à jour.");
+                return Response.noContent().build(); // 204
+            } else {
+                System.err.println("[API] ÉCHEC : La procédure SQL a retourné 0 (Propriétaire incorrect ou ID inexistant).");
+                return Response.status(Response.Status.FORBIDDEN).build(); // 403
+            }
         } catch (Exception e) {
+            System.err.println("[API] ERREUR CRITIQUE : " + e.getMessage());
             e.printStackTrace();
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+        } finally {
+            System.out.println("======= [API PUT] FIN DE TRAITEMENT =======");
         }
     }
 

@@ -21,6 +21,7 @@ public class Gift implements Serializable {
     private double price;
     private Integer priority;  
     private String photoUrl;
+    private String siteUrl;
     private Set<Contribution> contributions = new HashSet<>();
 
     public Gift() {}
@@ -91,6 +92,9 @@ public class Gift implements Serializable {
 
     public String getPhotoUrl() { return photoUrl; }
     public void setPhotoUrl(String photoUrl) { this.photoUrl = photoUrl; }
+    
+    public String getSiteUrl() {return siteUrl;}
+    public void setSiteUrl(String siteUrl) {this.siteUrl = siteUrl;}
 
     public Set<Contribution> getContributions() { return contributions; }
     public void setContributions(Set<Contribution> contributions) { this.contributions = contributions; }
