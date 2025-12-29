@@ -23,8 +23,8 @@ public class GiftDAO extends AbstractDAO<Gift> {
 
     // --- CREATE ---
     public Gift create(Gift gift, int wishlistId) {
-        System.out.println("[DEBUG GiftDAO] Entrée dans create() pour: " + gift.getName());
-        String sql = "{call pkg_gift_data.create_gift(?, ?, ?, ?, ?, ?, ?, ?)}";
+        // Changement : 9 points d'interrogation maintenant
+        String sql = "{call pkg_gift_data.create_gift(?, ?, ?, ?, ?, ?, ?, ?, ?)}";
         try (Connection conn = getActiveConnection(); 
              CallableStatement cs = conn.prepareCall(sql)) {
             
@@ -34,22 +34,19 @@ public class GiftDAO extends AbstractDAO<Gift> {
             cs.setDouble(4, gift.getPrice());
             cs.setInt(5, gift.getPriority() != null ? gift.getPriority() : 3);
             cs.setString(6, gift.getPhotoUrl());
-            cs.setString(7, "AVAILABLE");
-            cs.registerOutParameter(8, Types.INTEGER); 
+            cs.setString(7, gift.getSiteUrl()); // <--- NOUVEAU (7ème)
+            cs.setString(8, "AVAILABLE");       // (8ème)
+            cs.registerOutParameter(9, Types.INTEGER); // ID généré (9ème)
 
-            System.out.println("[DEBUG GiftDAO] Exécution procedure create_gift...");
             cs.execute();
-            int generatedId = cs.getInt(8);
-            System.out.println("[DEBUG GiftDAO] ID généré par Oracle: " + generatedId);
+            int generatedId = cs.getInt(9);
 
             if (generatedId > 0) {
                 conn.commit(); 
-                System.out.println("[DEBUG GiftDAO] Commit réussi.");
                 gift.setId(generatedId);
                 return gift;
             }
         } catch (SQLException e) { 
-            System.out.println("[ERREUR GiftDAO] Erreur SQL dans create: " + e.getMessage());
             e.printStackTrace(); 
         }
         return null;
@@ -57,8 +54,8 @@ public class GiftDAO extends AbstractDAO<Gift> {
 
     // --- UPDATE ---
     public boolean update(Gift gift, int wishlistId, int userId) {
-        System.out.println("[DEBUG GiftDAO] Entrée dans update() pour Gift ID: " + gift.getId());
-        String sql = "{call pkg_gift_data.update_gift(?, ?, ?, ?, ?, ?, ?, ?, ?)}";
+        // Changement : 10 points d'interrogation maintenant
+        String sql = "{call pkg_gift_data.update_gift(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)}";
         try (Connection conn = getActiveConnection();
              CallableStatement cs = conn.prepareCall(sql)) {
             
@@ -70,19 +67,17 @@ public class GiftDAO extends AbstractDAO<Gift> {
             cs.setDouble(6, gift.getPrice());
             cs.setInt(7, gift.getPriority() != null ? gift.getPriority() : 3);
             cs.setString(8, gift.getPhotoUrl());
-            cs.registerOutParameter(9, Types.INTEGER); // Status retour
+            cs.setString(9, gift.getSiteUrl()); // <--- NOUVEAU (9ème)
+            cs.registerOutParameter(10, Types.INTEGER); // Status retour (10ème)
 
             cs.execute();
-            int result = cs.getInt(9);
-            System.out.println("[DEBUG GiftDAO] Résultat procédure update: " + result);
+            int result = cs.getInt(10);
 
             if (result == 1) {
                 conn.commit();
-                System.out.println("[DEBUG GiftDAO] Update committé avec succès.");
                 return true;
             }
         } catch (SQLException e) { 
-            System.out.println("[ERREUR GiftDAO] Erreur SQL dans update: " + e.getMessage());
             e.printStackTrace(); 
         }
         return false;
@@ -90,7 +85,6 @@ public class GiftDAO extends AbstractDAO<Gift> {
 
     // --- DELETE ---
     public boolean delete(int giftId, int userId) {
-        System.out.println("[DEBUG GiftDAO] Entrée dans delete() pour Gift ID: " + giftId);
         String sql = "{call pkg_gift_data.delete_gift(?, ?, ?)}";
         try (Connection conn = getActiveConnection();
              CallableStatement cs = conn.prepareCall(sql)) {
@@ -99,45 +93,55 @@ public class GiftDAO extends AbstractDAO<Gift> {
             cs.registerOutParameter(3, Types.INTEGER); 
             cs.execute();
             int result = cs.getInt(3);
-            System.out.println("[DEBUG GiftDAO] Résultat procédure delete: " + result);
 
             if (result == 1) {
                 conn.commit();
-                System.out.println("[DEBUG GiftDAO] Delete committé.");
                 return true;
             }
         } catch (SQLException e) { 
-            System.out.println("[ERREUR GiftDAO] Erreur SQL dans delete: " + e.getMessage());
             e.printStackTrace(); 
         }
         return false;
     }
 
-    // --- GET ALL FOR USER ---
+    // --- GET ALL FOR USER (Côté SERVEUR API) ---
     public List<Gift> getAllGiftsForUser(int userId) {
-        System.out.println("[DEBUG GiftDAO] Récupération de tous les cadeaux pour User ID: " + userId);
+        System.out.println("\n[DEBUG SERVEUR DAO] --- Récupération des cadeaux pour User: " + userId + " ---");
         List<Gift> gifts = new ArrayList<>();
         String sql = "{call pkg_gift_data.get_user_gifts(?, ?)}";
+        
         try (Connection conn = getActiveConnection();
              CallableStatement cs = conn.prepareCall(sql)) {
+            
             cs.setInt(1, userId);
             cs.registerOutParameter(2, OracleTypes.CURSOR);
+            
+            System.out.println("[DEBUG SERVEUR DAO] Exécution de pkg_gift_data.get_user_gifts...");
             cs.execute();
+            
             try (ResultSet rs = (ResultSet) cs.getObject(2)) {
+                int count = 0;
                 while (rs.next()) {
-                    gifts.add(map(rs));
+                    count++;
+                    Gift g = map(rs); // Utilise ta méthode map qui contient rs.getString("SITE_URL")
+                    
+                    // --- PRINT DE VÉRIFICATION ---
+                    System.out.println("[DEBUG SERVEUR DAO] Cadeau #" + count + " trouvé: " + g.getName());
+                    System.out.println("[DEBUG SERVEUR DAO] -> Site URL en DB: " + g.getSiteUrl());
+                    
+                    gifts.add(g);
                 }
+                System.out.println("[DEBUG SERVEUR DAO] Total cadeaux récupérés: " + count);
             }
-            System.out.println("[DEBUG GiftDAO] Nombre de cadeaux trouvés: " + gifts.size());
         } catch (SQLException e) { 
-            System.out.println("[ERREUR GiftDAO] Erreur dans getAllGiftsForUser: " + e.getMessage());
+            System.err.println("[ERREUR SERVEUR DAO] Erreur dans getAllGiftsForUser: " + e.getMessage());
             e.printStackTrace(); 
         }
+        System.out.println("[DEBUG SERVEUR DAO] --- FIN RÉCUPÉRATION ---\n");
         return gifts;
     }
 
     public java.util.Set<Gift> findAllByWishlistId(int wishlistId) {
-        System.out.println("[DEBUG GiftDAO] findAllByWishlistId pour ID: " + wishlistId);
         java.util.Set<Gift> gifts = new java.util.HashSet<>();
         String sql = "{call pkg_wishlist_data.get_gifts(?, ?)}";
         try (Connection conn = getActiveConnection();
@@ -150,9 +154,7 @@ public class GiftDAO extends AbstractDAO<Gift> {
                     gifts.add(map(rs));
                 }
             }
-            System.out.println("[DEBUG GiftDAO] Cadeaux trouvés dans la liste: " + gifts.size());
         } catch (SQLException e) { 
-            System.out.println("[ERREUR GiftDAO] Erreur dans findAllByWishlistId: " + e.getMessage());
             e.printStackTrace(); 
         }
         return gifts;
@@ -165,7 +167,6 @@ public class GiftDAO extends AbstractDAO<Gift> {
         try {
             id = rs.getInt("ID");
         } catch (SQLException e) {
-            // Pas de print ici pour ne pas polluer si c'est GIFT_ID
             id = rs.getInt("GIFT_ID");
         }
         g.setId(id);
@@ -174,10 +175,10 @@ public class GiftDAO extends AbstractDAO<Gift> {
         g.setPrice(rs.getDouble("PRICE"));
         g.setPriority(rs.getInt("PRIORITY"));
         g.setPhotoUrl(rs.getString("PHOTO_URL"));
+        g.setSiteUrl(rs.getString("SITE_URL")); // <--- NE PAS OUBLIER LE MAPPING
         return g;
     }
 
-    // Méthodes forcées
     @Override public Gift find(int id) { return null; }
     @Override public List<Gift> findAll() { return new ArrayList<>(); }
     @Override public boolean delete(Gift obj) { return false; } 

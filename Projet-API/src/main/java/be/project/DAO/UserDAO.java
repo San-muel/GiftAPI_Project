@@ -113,9 +113,14 @@ public class UserDAO extends AbstractDAO<User> {
                     
                     gift.setPhotoUrl(rs.getString("PHOTO_URL"));
                     
+                    // --- LA CORRECTION EST ICI ---
+                    gift.setSiteUrl(rs.getString("SITE_URL")); 
+                    // -----------------------------
+
                     wishlist.getGifts().add(gift); 
                     giftCount++;
                 }
+                System.out.println("[DEBUG API] " + giftCount + " cadeaux chargés pour la liste " + wishlist.getId());
             }
         } catch (SQLException e) {
             System.err.println("DAO ERROR: Erreur lors du chargement des Gifts pour la Wishlist " + wishlist.getId());
