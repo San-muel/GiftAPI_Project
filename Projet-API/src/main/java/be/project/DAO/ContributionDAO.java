@@ -4,6 +4,7 @@ import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import oracle.jdbc.OracleTypes;
 
 import be.project.model.Contribution;
 
@@ -57,36 +58,52 @@ public class ContributionDAO extends AbstractDAO<Contribution> {
      */
     public List<Contribution> findAllByGiftId(int giftId) {
         List<Contribution> list = new ArrayList<>();
-        // Requête SQL standard (assurez-vous que vos noms de colonnes correspondent à votre BDD)
-        String sql = "SELECT ID, USER_ID, GIFT_ID, AMOUNT, COMMENT_TEXT, CONTRIBUTED_AT FROM CONTRIBUTIONS WHERE GIFT_ID = ?";
+        // Syntaxe pour appeler la procédure avec le curseur en sortie
+        String sql = "{call PKG_CONTRIBUTION_DATA.get_contributions_by_gift(?, ?)}";
 
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setInt(1, giftId);
+        try (CallableStatement cs = connection.prepareCall(sql)) {
+            // Paramètre 1 : ID du cadeau (Entrée)
+            cs.setInt(1, giftId);
             
-            try (ResultSet rs = ps.executeQuery()) {
+            // Paramètre 2 : Le curseur de résultat (Sortie)
+            cs.registerOutParameter(2, OracleTypes.CURSOR);
+            
+            cs.execute();
+            
+            // On récupère le curseur et on le cast en ResultSet
+            try (ResultSet rs = (ResultSet) cs.getObject(2)) {
                 while (rs.next()) {
+                    // On utilise votre méthode existante pour mapper les colonnes
                     list.add(mapResultSetToContribution(rs));
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Erreur SQL findAllByGiftId: " + e.getMessage());
+            System.err.println("Erreur SQL findAllByGiftId (Procedure): " + e.getMessage());
+            e.printStackTrace();
         }
         return list;
     }
 
     @Override
     public Contribution find(int id) {
-        // CORRECTION : Vraie requête SQL
-        String sql = "SELECT ID, USER_ID, GIFT_ID, AMOUNT, COMMENT_TEXT, CONTRIBUTED_AT FROM CONTRIBUTIONS WHERE ID = ?";
+        String sql = "{call PKG_CONTRIBUTION_DATA.get_contribution_by_id(?, ?)}";
         
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
-             ps.setInt(1, id);
-             try (ResultSet rs = ps.executeQuery()) {
+        try (CallableStatement cs = connection.prepareCall(sql)) {
+            // Paramètre 1 : ID de la contribution (Entrée)
+            cs.setInt(1, id);
+            
+            // Paramètre 2 : Le curseur de résultat (Sortie)
+            cs.registerOutParameter(2, OracleTypes.CURSOR);
+            
+            cs.execute();
+            
+            try (ResultSet rs = (ResultSet) cs.getObject(2)) {
                 if (rs.next()) {
                     return mapResultSetToContribution(rs);
                 }
-             }
+            }
         } catch (SQLException e) {
+            System.err.println("Erreur SQL find contribution (Procedure): " + e.getMessage());
             e.printStackTrace();
         }
         return null;
