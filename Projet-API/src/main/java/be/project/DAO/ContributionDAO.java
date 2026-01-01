@@ -114,6 +114,8 @@ public class ContributionDAO extends AbstractDAO<Contribution> {
         return c;
     }
     
+    
+    
     // Méthodes inutilisées
     @Override public boolean delete(Contribution obj) { return false; }
     @Override public boolean update(Contribution obj) { return false; }

@@ -30,6 +30,38 @@ public class GiftAPI {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
         }
     }
+    
+    @PUT
+    @Path("/{id}/priority")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response updatePriority(
+            @PathParam("wishlistId") int wishlistId, 
+            @PathParam("id") int giftId, 
+            Gift gift, 
+            @Context HttpHeaders headers) {
+        
+        // 1. Sécurité : Validation du Token
+        int userId = HelpMethode.validateAndExtractUserId(headers.getHeaderString(HttpHeaders.AUTHORIZATION));
+        if (userId == -1) return Response.status(Response.Status.UNAUTHORIZED).build();
+
+        try {
+            // 2. Préparation de l'objet (Active Record)
+            gift.setId(giftId); 
+            
+            // 3. Appel de la logique métier dans le modèle
+            // On passe wishlistId et userId pour vérifier que l'utilisateur possède bien la liste
+            boolean success = gift.updatePriority(wishlistId, userId);
+            
+            if (success) {
+                return Response.noContent().build(); // 204 Success
+            } else {
+                return Response.status(Response.Status.FORBIDDEN).build(); // 403 si pas le propriétaire
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+        }
+    }
 
     @POST
     @Consumes(MediaType.APPLICATION_JSON)

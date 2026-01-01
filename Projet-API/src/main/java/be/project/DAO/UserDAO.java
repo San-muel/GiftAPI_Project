@@ -88,12 +88,13 @@ public class UserDAO extends AbstractDAO<User> {
         if (wishlist == null || wishlist.getId() == 0) return;
 
         String sql = "{call pkg_wishlist_data.get_gifts(?, ?)}";
-        int giftCount = 0;
+        
+        // On prépare le DAO des contributions
+        ContributionDAO contributionDAO = new ContributionDAO(this.connection);
 
         try (CallableStatement cs = connection.prepareCall(sql)) {
             cs.setInt(1, wishlist.getId());
             cs.registerOutParameter(2, OracleTypes.CURSOR);
-
             cs.execute();
 
             try (ResultSet rs = (ResultSet) cs.getObject(2)) {
@@ -105,25 +106,21 @@ public class UserDAO extends AbstractDAO<User> {
                     gift.setPrice(rs.getDouble("PRICE"));
                     
                     int priorityValue = rs.getInt("PRIORITY");
-                    if (!rs.wasNull()) {
-                         gift.setPriority(priorityValue);
-                    } else {
-                         gift.setPriority(null);
-                    }
+                    gift.setPriority(rs.wasNull() ? null : priorityValue);
                     
                     gift.setPhotoUrl(rs.getString("PHOTO_URL"));
-                    
-                    // --- LA CORRECTION EST ICI ---
                     gift.setSiteUrl(rs.getString("SITE_URL")); 
-                    // -----------------------------
+
+                    // --- ACTION CRUCIALE : Charger les contributions ---
+                    // On utilise la méthode que vous avez déjà dans votre ContributionDAO
+                    List<be.project.model.Contribution> contribs = contributionDAO.findAllByGiftId(gift.getId());
+                    gift.getContributions().addAll(contribs); 
+                    // ---------------------------------------------------
 
                     wishlist.getGifts().add(gift); 
-                    giftCount++;
                 }
-                System.out.println("[DEBUG API] " + giftCount + " cadeaux chargés pour la liste " + wishlist.getId());
             }
         } catch (SQLException e) {
-            System.err.println("DAO ERROR: Erreur lors du chargement des Gifts pour la Wishlist " + wishlist.getId());
             e.printStackTrace();
         }
     }
@@ -283,7 +280,13 @@ public class UserDAO extends AbstractDAO<User> {
 
     @Override
     public User find(int id) {
-        // Logique de recherche par ID (à implémenter)
+        List<User> allUsers = this.findAll();
+        for (User u : allUsers) {
+            if (u.getId() == id) {
+                this.loadUserRelations(u);
+                return u;
+            }
+        }
         return null;
     }
 

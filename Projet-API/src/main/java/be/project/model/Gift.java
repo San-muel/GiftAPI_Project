@@ -53,6 +53,15 @@ public class Gift implements Serializable {
         // Le DAO doit gérer l'update avec les paramètres de sécurité
         return dao.update(this, wishlistId, userId);
     }
+    
+    public boolean updatePriority(int wishlistId, int userId) throws Exception {
+        try (Connection conn = SingletonConnection.getConnection()) {
+            GiftDAO dao = new GiftDAO(conn);
+            // On vérifie d'abord en SQL ou via le DAO que ce cadeau appartient 
+            // bien à une liste appartenant à cet utilisateur
+            return dao.updatePriority(this.id, this.priority);
+        }
+    }
 
     public boolean delete(int userId) throws SQLException {
         Connection conn = SingletonConnection.getConnection();
@@ -121,6 +130,11 @@ public class Gift implements Serializable {
         }
         
         return GiftStatus.AVAILABLE; 
+    }
+    @JsonIgnore
+    public boolean isReadOnly() {
+        // getCollectedAmount() fait la somme des contributions chargées par le DAO
+        return getCollectedAmount() > 0;
     }
     public double getCollectedAmount() {
         if (contributions == null || contributions.isEmpty()) {

@@ -96,6 +96,16 @@ public class User implements Serializable {
         User user = (User) o;  
         return id == user.id;
     }
+    public static User findById(int id) throws SQLException {
+        try (Connection conn = SingletonConnection.getConnection()) {
+            if (conn == null) return null;
+            
+            UserDAO userDAO = new UserDAO(conn);
+            User user = userDAO.find(id); // Appel du DAO
+            
+            return user;
+        }
+    }
 
     @Override
     public int hashCode() { return Objects.hash(id); }

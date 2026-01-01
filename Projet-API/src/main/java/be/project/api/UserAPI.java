@@ -65,4 +65,25 @@ public class UserAPI {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
         }
     }
+ // Dans ta classe UserAPI (Serveur)
+
+    @GET
+    @Path("/{id}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getUserById(@PathParam("id") int id) {
+        try {
+            // La méthode User.findById(id) doit charger l'utilisateur 
+            // ainsi que ses Wishlists, ses Gifts et ses Contributions
+            User user = User.findById(id); 
+            
+            if (user == null) {
+                return Response.status(Response.Status.NOT_FOUND).build();
+            }
+            
+            return Response.ok(objectMapper.writeValueAsString(user)).build();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+        }
+    }
 }

@@ -159,6 +159,28 @@ public class GiftDAO extends AbstractDAO<Gift> {
         }
         return gifts;
     }
+    
+    public boolean updatePriority(int giftId, int newPriority) {
+        String sql = "{call PKG_GIFT_DATA.UPDATE_PRIORITY(?, ?, ?)}";
+        try (Connection conn = getActiveConnection();
+             CallableStatement cs = conn.prepareCall(sql)) {
+            
+            cs.setInt(1, giftId);
+            cs.setInt(2, newPriority);
+            cs.registerOutParameter(3, java.sql.Types.INTEGER);
+            
+            cs.execute();
+            int result = cs.getInt(3);
+
+            if (result > 0) {
+                conn.commit(); // <--- AJOUTE CECI IMPÉRATIVEMENT
+                return true;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
 
     // Mapping
     private Gift map(ResultSet rs) throws SQLException {
