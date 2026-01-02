@@ -1,5 +1,7 @@
 package be.project.model;
 
+import be.project.DAO.AbstractDAOFactory;
+import be.project.DAO.ContributionDAO; // Import du DAO spécifique
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -7,13 +9,11 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
-import be.project.DAO.AbstractDAOFactory;
-import be.project.DAO.DAO;
 public class Contribution implements Serializable {
 
-	private static final long serialVersionUID = -1788323929082771022L;
-	private int id;
-	private int userId; 
+    private static final long serialVersionUID = -1788323929082771022L;
+    private int id;
+    private int userId; 
     private int giftId;
     private double amount;
     private LocalDateTime contributedAt;
@@ -30,18 +30,42 @@ public class Contribution implements Serializable {
         this.comment = comment;
     }
 
-    public int getId() {
-        return id;
+    // --- LE RACCOURCI (Méthode privée pour les instances) ---
+    private ContributionDAO dao() {
+        return (ContributionDAO) AbstractDAOFactory.getFactory(AbstractDAOFactory.JDBC_DAO).getContributionDAO();
     }
 
-    public void setId(int id) {
-        this.id = id;
+    // --- Active Record (Méthodes liées à l'instance) ---
+
+    public boolean save() {
+        // Plus propre : on utilise le raccourci dao()
+        // On suppose que les userId et giftId sont déjà set dans 'this'
+        return dao().create(this); 
     }
 
-    public double getAmount() {
-        return amount;
+    // --- Méthodes Statiques (Recherche) ---
+    // Pour les méthodes static, on appelle la Factory directement car 'this.dao()' n'existe pas
+
+    public static Contribution find(int id) {
+        return AbstractDAOFactory.getFactory(AbstractDAOFactory.JDBC_DAO).getContributionDAO().find(id);
     }
 
+    public static List<Contribution> findAll() {
+        return AbstractDAOFactory.getFactory(AbstractDAOFactory.JDBC_DAO).getContributionDAO().findAll();
+    }
+    
+    public static List<Contribution> findAllByGiftId(int giftId) {
+        // C'est ici que tu avais la connexion "en dur". C'est corrigé :
+        ContributionDAO dao = (ContributionDAO) AbstractDAOFactory.getFactory(AbstractDAOFactory.JDBC_DAO).getContributionDAO();
+        return dao.findAllByGiftId(giftId);
+    }
+
+    // --- Getters / Setters Standards ---
+
+    public int getId() { return id; }
+    public void setId(int id) { this.id = id; }
+
+    public double getAmount() { return amount; }
     public void setAmount(double amount) {
         if (amount < 0) {
             throw new IllegalArgumentException("Le montant ne peut pas être négatif");
@@ -49,49 +73,21 @@ public class Contribution implements Serializable {
         this.amount = amount;
     }
 
-    public LocalDateTime getContributedAt() {
-        return contributedAt;
-    }
+    public LocalDateTime getContributedAt() { return contributedAt; }
+    public void setContributedAt(LocalDateTime contributedAt) { this.contributedAt = contributedAt; }
 
-    public void setContributedAt(LocalDateTime contributedAt) {
-        this.contributedAt = contributedAt;
-    }
+    public String getComment() { return comment; }
+    public void setComment(String comment) { this.comment = comment; }
 
-    public String getComment() {
-        return comment;
-    }
-
-    public void setComment(String comment) {
-        this.comment = comment;
-    }
-
-    public Set<User> getUsers() {
-        return users;
-    }
-
-    public void setUsers(Set<User> users) {
-        this.users = users;
-    }
+    public Set<User> getUsers() { return users; }
+    public void setUsers(Set<User> users) { this.users = users; }
+    public void addUser(User user) { this.users.add(user); }
     
-    public void addUser(User user) {
-        this.users.add(user);
-    }
-    
-	public int getUserId() {
-		return userId;
-	}
+    public int getUserId() { return userId; }
+    public void setUserId(int userId) { this.userId = userId; }
 
-	public void setUserId(int userId) {
-		this.userId = userId;
-	}
-
-	public int getGiftId() {
-		return giftId;
-	}
-
-	public void setGiftId(int giftId) {
-		this.giftId = giftId;
-	}
+    public int getGiftId() { return giftId; }
+    public void setGiftId(int giftId) { this.giftId = giftId; }
 
     @Override
     public String toString() {
@@ -115,46 +111,4 @@ public class Contribution implements Serializable {
     public int hashCode() {
         return Objects.hash(id);
     }
-    
-    /**
-     * Méthode utilitaire pour obtenir le DAO de Contribution via la DAOFactory.
-     * Cette méthode délègue la création du DAO à la Factory, respectant ainsi le découplage.
-     */
-    private static DAO<Contribution> getContributionDAO() {
-        // Obtient la Factory concrète (ici, la Factory JDBC) en utilisant la méthode statique
-        AbstractDAOFactory factory = AbstractDAOFactory.getFactory(AbstractDAOFactory.JDBC_DAO);
-        
-        if (factory == null) {
-            throw new IllegalStateException("Impossible d'obtenir la DAO Factory pour le type JDBC.");
-        }
-        
-        // Demande à la Factory de fournir le DAO de Contribution.
-        // C'est la Factory qui se charge de créer le DAO avec la bonne connexion.
-        return factory.getContributionDAO();
-    }
-    
-    // --- Méthodes d'accès aux données (Le rôle du Modèle) ---
-    
-    public static Contribution find(int id) {
-        // Le Modèle appelle la méthode utilitaire qui utilise la Factory
-        DAO<Contribution> dao = getContributionDAO();
-        return dao.find(id);
-    }
-    public boolean save() {
-        // getContributionDAO() utilise ta Factory JDBC pour obtenir le DAO
-        return getContributionDAO().create(this);
-    }
-
-    public static List<Contribution> findAll() {
-        // Le Modèle appelle la méthode utilitaire qui utilise la Factory
-        DAO<Contribution> dao = getContributionDAO();
-        return dao.findAll();
-    }
-    
-    public static List<Contribution> findAllByGiftId(int giftId) {
-        // On suppose que SingletonConnection est géré dans le DAO
-        be.project.DAO.ContributionDAO dao = new be.project.DAO.ContributionDAO(be.project.singleton.SingletonConnection.getConnection());
-        return dao.findAllByGiftId(giftId);
-    }
-
 }

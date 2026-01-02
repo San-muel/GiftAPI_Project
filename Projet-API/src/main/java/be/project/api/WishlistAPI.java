@@ -24,13 +24,33 @@ public class WishlistAPI {
     // ==========================================
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getWishlistsForUser(@Context HttpHeaders headers) {
-        int userId = HelpMethode.validateAndExtractUserId(headers.getHeaderString(HttpHeaders.AUTHORIZATION));
-        if (userId == -1) return Response.status(Response.Status.UNAUTHORIZED).build();
-
+    public Response getWishlists(
+            @QueryParam("filter") String filter, 
+            @Context HttpHeaders headers
+    ) {
         try {
-            List<Wishlist> wishlists = Wishlist.getAllForUser(userId);
-            return Response.ok(objectMapper.writeValueAsString(wishlists)).build();
+            // CAS 1 : Demande des listes publiques
+            if ("public".equals(filter)) {
+                System.out.println("[API] Demande de toutes les listes publiques (filter=public)");
+                List<Wishlist> allLists = Wishlist.findAll();
+                
+                if (allLists == null || allLists.isEmpty()) {
+                    return Response.status(Response.Status.NO_CONTENT).build();
+                }
+                return Response.ok(objectMapper.writeValueAsString(allLists)).build();
+            }
+
+            // CAS 2 : Pas de filtre, donc on veut les listes de l'utilisateur (Token OBLIGATOIRE)
+            int userId = HelpMethode.validateAndExtractUserId(headers.getHeaderString(HttpHeaders.AUTHORIZATION));
+            
+            if (userId == -1) {
+                return Response.status(Response.Status.UNAUTHORIZED).build();
+            }
+
+            System.out.println("[API] Demande des listes privées pour User ID : " + userId);
+            List<Wishlist> userLists = Wishlist.getAllForUser(userId);
+            return Response.ok(objectMapper.writeValueAsString(userLists)).build();
+
         } catch (Exception e) {
             e.printStackTrace();
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();

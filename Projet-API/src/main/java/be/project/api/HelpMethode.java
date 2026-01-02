@@ -40,28 +40,33 @@ public class HelpMethode implements ContextResolver<ObjectMapper> {
      * @return L'ID utilisateur (int) s'il est valide, sinon -1.
      */
     public static int validateAndExtractUserId(String authorizationHeader) {
-        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
-            return -1;
-        }
-
-        String token = authorizationHeader.substring("Bearer ".length()).trim();
-        
-        // Validation du format du token factice : "fake-jwt-token-ID:email:timestamp"
-        if (token.startsWith("fake-jwt-token-")) {
-            String payload = token.substring("fake-jwt-token-".length());
-            String[] parts = payload.split(":");
-            
-            if (parts.length >= 1) {
-                try {
-                    // La première partie est censée être l'ID utilisateur
-                    return Integer.parseInt(parts[0]);
-                } catch (NumberFormatException e) {
-                    System.err.println("SECURITY ERROR: ID utilisateur non numérique dans le payload du token.");
-                }
-            }
-        }
-        
-        System.err.println("SECURITY ERROR: Token invalide ou malformé.");
+    // 1. Vérif de base du header
+    if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+        System.err.println("SECURITY ERROR: Header absent ou ne commence pas par Bearer");
         return -1;
     }
+
+    // On retire "Bearer " pour garder le token
+    String token = authorizationHeader.substring("Bearer ".length()).trim();
+    
+    // CAS 1 : C'est le format complexe "fake-jwt-token-ID:..."
+    if (token.startsWith("fake-jwt-token-")) {
+        try {
+            String payload = token.substring("fake-jwt-token-".length());
+            String[] parts = payload.split(":");
+            return Integer.parseInt(parts[0]);
+        } catch (Exception e) {
+            System.err.println("SECURITY ERROR: Échec parsing fake-jwt.");
+        }
+    }
+    
+    // CAS 2 (CELUI QUI TE SAUVE) : C'est juste l'ID brut (ex: "101")
+    // C'est ici que ton code actuel va passer
+    try {
+        return Integer.parseInt(token);
+    } catch (NumberFormatException e) {
+        System.err.println("SECURITY ERROR: Le token '" + token + "' n'est ni un fake-jwt ni un ID numérique.");
+        return -1;
+    }
+}
 }

@@ -16,18 +16,21 @@ public class UserAPI {
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     // 1. LOGIN : On lui donne un chemin spécifique /users/login
-    @GET
+    @POST 
     @Path("/login") 
+    @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON) 
-    public Response login(@QueryParam("email") String email, @QueryParam("psw") String psw) {
-        if (email == null || psw == null) {
-            return Response.status(Response.Status.BAD_REQUEST).build();
-        }
+    public Response login(User credentials) { // Jackson va mapper email/psw depuis le JSON
+        if (credentials == null) return Response.status(Response.Status.BAD_REQUEST).build();
+        
         try {
-            User authenticatedUser = User.authenticate(email, psw); 
+            // Authentification via le modèle
+            User authenticatedUser = User.authenticate(credentials.getEmail(), credentials.getPsw()); 
+            
             if (authenticatedUser == null) {
                 return Response.status(Response.Status.UNAUTHORIZED).build();
             }
+            // On renvoie l'utilisateur (avec son token/api-key généré comme dit page 198 du syllabus)
             return Response.ok(objectMapper.writeValueAsString(authenticatedUser)).build();
         } catch (Exception e) {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();

@@ -1,10 +1,9 @@
 package be.project.model;
 
+import be.project.DAO.AbstractDAOFactory;
 import be.project.DAO.GiftDAO;
-import be.project.singleton.SingletonConnection;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.io.Serializable;
-import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.HashSet;
@@ -15,7 +14,7 @@ public class Gift implements Serializable {
     private static final long serialVersionUID = 7201519647003409625L;
     
     private int id;
-    private int wishlistId; // Ajouté pour faciliter le transport des données
+    private int wishlistId; 
     private String name;
     private String description;
     private double price;
@@ -25,58 +24,40 @@ public class Gift implements Serializable {
     private Set<Contribution> contributions = new HashSet<>();
 
     public Gift() {}
+    
+    // --- LE RACCOURCI MAGIQUE (Méthode utilitaire privée) ---
+    private GiftDAO dao() {
+        return (GiftDAO) AbstractDAOFactory.getFactory(AbstractDAOFactory.JDBC_DAO).getGiftDAO();
+    }
 
-    // --- Méthodes d'Action ---
+    // --- Méthodes d'Action (Active Record) ---
 
-    /**
-     * Crée un cadeau.
-     * Note: Le userId est passé par l'API pour la sécurité, 
-     * mais n'est pas envoyé à la procédure de création du cadeau.
-     */
     public Gift create(int wishlistId, int userId) throws SQLException {
-        Connection conn = SingletonConnection.getConnection();
-        if (conn == null) return null;
-        
-        GiftDAO dao = new GiftDAO(conn);
-        // On définit le wishlistId dans l'objet avant l'envoi
-        this.wishlistId = wishlistId;
-        
-        // CORRECTION : Appel avec 2 paramètres pour matcher le GiftDAO corrigé
-        return dao.create(this, wishlistId);
+        return dao().create(this, wishlistId);
     }
 
     public boolean update(int wishlistId, int userId) throws SQLException {
-        Connection conn = SingletonConnection.getConnection();
-        if (conn == null) return false;
-        
-        GiftDAO dao = new GiftDAO(conn);
-        // Le DAO doit gérer l'update avec les paramètres de sécurité
-        return dao.update(this, wishlistId, userId);
+        // Plus de connexion manuelle ici, tout est délégué
+        return dao().update(this, wishlistId, userId);
     }
     
     public boolean updatePriority(int wishlistId, int userId) throws Exception {
-        try (Connection conn = SingletonConnection.getConnection()) {
-            GiftDAO dao = new GiftDAO(conn);
-            // On vérifie d'abord en SQL ou via le DAO que ce cadeau appartient 
-            // bien à une liste appartenant à cet utilisateur
-            return dao.updatePriority(this.id, this.priority);
-        }
+        // Le DAO gère la connexion et l'exécution
+        return dao().updatePriority(this.id, this.priority);
     }
 
     public boolean delete(int userId) throws SQLException {
-        Connection conn = SingletonConnection.getConnection();
-        if (conn == null) return false;
-        
-        GiftDAO dao = new GiftDAO(conn);
-        // On passe l'ID du cadeau et l'ID de l'utilisateur pour vérifier la propriété en SQL
-        return dao.delete(this.id, userId);
+        // Simple et efficace
+        return dao().delete(this.id, userId);
     }
 
+    // --- Méthode Statique (Cas particulier) ---
     public static List<Gift> getAllForUser(int userId) throws SQLException {
-        Connection conn = SingletonConnection.getConnection();
-        if (conn == null) return Collections.emptyList();
+        // Comme on est dans un contexte 'static', on ne peut pas utiliser 'this.dao()'
+        // On appelle donc la factory directement ici.
+        GiftDAO dao = (GiftDAO) AbstractDAOFactory.getFactory(AbstractDAOFactory.JDBC_DAO).getGiftDAO();
         
-        GiftDAO dao = new GiftDAO(conn);
+        if (dao == null) return Collections.emptyList();
         return dao.getAllGiftsForUser(userId);
     }
 
@@ -108,11 +89,8 @@ public class Gift implements Serializable {
     public Set<Contribution> getContributions() { return contributions; }
     public void setContributions(Set<Contribution> contributions) { this.contributions = contributions; }
 
-    /**
-     * Calcule le statut du cadeau en fonction des contributions.
-     * @JsonIgnore évite que Jackson ne crée un champ "status" redondant en JSON 
-     * s'il est déjà géré par la base de données.
-     */
+    // --- Logique Métier (Calculs) ---
+
     @JsonIgnore
     public GiftStatus getStatus() {
         if (contributions == null || contributions.isEmpty()) {
@@ -131,22 +109,23 @@ public class Gift implements Serializable {
         
         return GiftStatus.AVAILABLE; 
     }
+
     @JsonIgnore
     public boolean isReadOnly() {
-        // getCollectedAmount() fait la somme des contributions chargées par le DAO
         return getCollectedAmount() > 0;
     }
+
     public double getCollectedAmount() {
         if (contributions == null || contributions.isEmpty()) {
             return 0.0;
         }
-        // Somme des montants
         return contributions.stream()
                             .mapToDouble(Contribution::getAmount)
                             .sum();
     }
+
     public double getRemainingAmount() {
         double remaining = this.price - getCollectedAmount();
-        return Math.max(0, remaining); // Empêche les nombres négatifs
+        return Math.max(0, remaining);
     }
 }

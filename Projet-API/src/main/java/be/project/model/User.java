@@ -1,10 +1,9 @@
 package be.project.model;
 
+import be.project.DAO.AbstractDAOFactory;
 import be.project.DAO.UserDAO;
-import be.project.singleton.SingletonConnection;
 import java.io.Serializable;
-import java.sql.Connection;
-import java.sql.SQLException;
+import java.sql.SQLException; // On garde juste l'exception pour la signature
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -18,7 +17,6 @@ public class User implements Serializable {
     private String psw;
     private String token; 
     
-    
     private Set<Contribution> contributions = new HashSet<>();
     private Set<Wishlist> sharedWishlists = new HashSet<>();   
     private Set<Wishlist> createdWishlists = new HashSet<>();  
@@ -26,48 +24,45 @@ public class User implements Serializable {
 
     public User() {}
 
-    // --- Méthodes Active Record (Anciennement dans UserService) ---
+    // --- LE RACCOURCI (Méthode privée pour les instances) ---
+    private UserDAO dao() {
+        return (UserDAO) AbstractDAOFactory.getFactory(AbstractDAOFactory.JDBC_DAO).getUserDAO();
+    }
+
+    // --- Méthodes Active Record ---
 
     public static User authenticate(String email, String psw) throws SQLException {
-        try (Connection conn = SingletonConnection.getConnection()) {
-            if (conn == null) return null;
-            
-            UserDAO userDAO = new UserDAO(conn);
-            User user = userDAO.authenticate(email, psw);
-            
-            if (user != null) {
-                user.setToken(user.generateJwtToken());
-            }
-            return user;
+        // 1. Appel à la Factory (plus de connexion manuelle)
+        UserDAO dao = (UserDAO) AbstractDAOFactory.getFactory(AbstractDAOFactory.JDBC_DAO).getUserDAO();
+        
+        // 2. Appel de la méthode spécifique du DAO
+        User user = dao.authenticate(email, psw);
+        
+        // 3. Logique métier (Token) reste ici
+        if (user != null) {
+            user.setToken(user.generateJwtToken());
         }
+        return user;
     }
 
     public boolean register() throws SQLException {
-        System.out.println("[API-MODEL] Tentative d'obtention de la connexion DB...");
-        try (Connection conn = SingletonConnection.getConnection()) {
-            if (conn == null) {
-                System.err.println("[API-MODEL] ÉCHEC : La connexion DB est NULL !");
-                return false;
-            }
-            System.out.println("[API-MODEL] Connexion DB obtenue avec succès.");
-            UserDAO userDAO = new UserDAO(conn);
-            return userDAO.create(this);
-        } catch (SQLException e) {
-            System.err.println("[API-MODEL] Erreur SQL : " + e.getMessage());
-            throw e;
-        }
+        // Nettoyé : on utilise le raccourci dao()
+        // Plus de try/catch SQL ici, c'est le DAO qui gère ou propage
+        return dao().create(this);
     }
 
     public static List<User> getAllUsers() throws SQLException {
-        try (Connection conn = SingletonConnection.getConnection()) {
-            if (conn == null) return List.of();
-            
-            UserDAO userDAO = new UserDAO(conn);
-            return userDAO.findAll(); // Appelle le DAO pour récupérer la liste
-        }
+        // Appel direct à la Factory
+        return AbstractDAOFactory.getFactory(AbstractDAOFactory.JDBC_DAO).getUserDAO().findAll();
     }
+
+    public static User findById(int id) throws SQLException {
+        // Appel direct à la Factory
+        return AbstractDAOFactory.getFactory(AbstractDAOFactory.JDBC_DAO).getUserDAO().find(id);
+    }
+
     /**
-     * Génère un Token JWT (Logique de sécurité déplacée dans le modèle)
+     * Génère un Token JWT (Logique de sécurité)
      */
     public String generateJwtToken() {
         String payload = this.id + ":" + this.email + ":" + System.currentTimeMillis();
@@ -95,16 +90,6 @@ public class User implements Serializable {
         if (o == null || getClass() != o.getClass()) return false;
         User user = (User) o;  
         return id == user.id;
-    }
-    public static User findById(int id) throws SQLException {
-        try (Connection conn = SingletonConnection.getConnection()) {
-            if (conn == null) return null;
-            
-            UserDAO userDAO = new UserDAO(conn);
-            User user = userDAO.find(id); // Appel du DAO
-            
-            return user;
-        }
     }
 
     @Override
