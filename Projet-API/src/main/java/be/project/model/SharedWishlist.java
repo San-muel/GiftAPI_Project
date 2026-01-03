@@ -14,6 +14,12 @@ public class SharedWishlist implements Serializable {
     private String notification;         
 
     public SharedWishlist() {}
+    
+    public SharedWishlist(int id, LocalDateTime sharedAt, String notification) {
+        this.id = id;
+        this.sharedAt = sharedAt;
+        this.notification = notification;
+    }
 
     /**
      * Méthode Active Record pour créer le lien.
