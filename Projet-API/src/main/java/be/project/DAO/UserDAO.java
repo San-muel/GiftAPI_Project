@@ -13,38 +13,25 @@ import be.project.model.User;
 import be.project.model.Wishlist;
 import oracle.jdbc.OracleTypes;
 
-// Supposons que AbstractDAO est une classe générique qui gère la connexion
 public class UserDAO extends AbstractDAO<User> {
 
     public UserDAO(Connection connection) {
         super(connection);
     }
 
-    
-    
-    /**
-     * Authentification de l'utilisateur et hydratation complète de l'objet User.
-     * Appelle pkg_user_auth.authenticate.
-     *
-     * @param email Email de l'utilisateur.
-     * @param plainPassword Mot de passe en clair.
-     * @return L'objet User HYDRATÉ si l'authentification réussit, sinon null.
-     */
     public User authenticate(String email, String plainPassword) {
     	    User user = null;
     	    String sql = "{call pkg_user_auth.authenticate(?, ?, ?, ?, ?, ?, ?)}";
 
     	    try (CallableStatement cs = connection.prepareCall(sql)) {
-    	        // IN parameters
     	        cs.setString(1, email.trim().toLowerCase());
     	        cs.setString(2, plainPassword);
 
-    	        // OUT parameters
-    	        cs.registerOutParameter(3, Types.INTEGER);   // p_user_id
-    	        cs.registerOutParameter(4, Types.VARCHAR);   // p_username
-    	        cs.registerOutParameter(5, Types.VARCHAR);   // p_user_email
-    	        cs.registerOutParameter(6, Types.VARCHAR);   // p_success ('TRUE'/'FALSE')
-    	        cs.registerOutParameter(7, Types.VARCHAR);   // p_error_msg
+    	        cs.registerOutParameter(3, Types.INTEGER);   
+    	        cs.registerOutParameter(4, Types.VARCHAR);   
+    	        cs.registerOutParameter(5, Types.VARCHAR);   
+    	        cs.registerOutParameter(6, Types.VARCHAR);   
+    	        cs.registerOutParameter(7, Types.VARCHAR);   
 
     	        cs.execute();
 
@@ -59,37 +46,21 @@ public class UserDAO extends AbstractDAO<User> {
     	            user.setPsw(null); 
 
     	            System.out.println("DAO DEBUG: Authentification réussie pour " + user.getEmail());
-                    
-                    // Chargement des relations (Wishlists, Gifts) après authentification
                     this.loadUserRelations(user); 
     	        } else {
     	            System.out.println("DAO DEBUG: Échec authentification : " + (errorMsg != null ? errorMsg : "Inconnu"));
     	        }
 
     	    } catch (SQLException e) {
-    	        System.err.println("DAO ERROR: Erreur lors de l'appel à pkg_user_auth.authenticate");
     	        e.printStackTrace();
     	    }
-
     	    return user;
     	}
     
-    //----------------------------------------------------------------------
-    // Chargement des Gifts pour une Wishlist
-    //----------------------------------------------------------------------
-
-    /**
-     * Charge tous les objets Gift associés à une Wishlist donnée.
-     * Utilise la procédure stockée pkg_wishlist_data.get_gifts.
-     *
-     * @param wishlist La Wishlist à hydrater avec les Gifts.
-     */
     public void loadWishlistGifts(Wishlist wishlist) {
         if (wishlist == null || wishlist.getId() == 0) return;
 
         String sql = "{call pkg_wishlist_data.get_gifts(?, ?)}";
-        
-        // On prépare le DAO des contributions
         ContributionDAO contributionDAO = new ContributionDAO(this.connection);
 
         try (CallableStatement cs = connection.prepareCall(sql)) {
@@ -111,11 +82,8 @@ public class UserDAO extends AbstractDAO<User> {
                     gift.setPhotoUrl(rs.getString("PHOTO_URL"));
                     gift.setSiteUrl(rs.getString("SITE_URL")); 
 
-                    // --- ACTION CRUCIALE : Charger les contributions ---
-                    // On utilise la méthode que vous avez déjà dans votre ContributionDAO
                     List<be.project.model.Contribution> contribs = contributionDAO.findAllByGiftId(gift.getId());
                     gift.getContributions().addAll(contribs); 
-                    // ---------------------------------------------------
 
                     wishlist.getGifts().add(gift); 
                 }
@@ -125,34 +93,21 @@ public class UserDAO extends AbstractDAO<User> {
         }
     }
     
-    //----------------------------------------------------------------------
-    // Chargement de toutes les relations de l'utilisateur
-    //----------------------------------------------------------------------
-
-    /**
-     * Charge les collections de l'utilisateur (Wishlists créées, partagées, infos, et leurs Gifts).
-     * Utilise la procédure stockée pkg_user_data.load_user_data.
-     */
     public void loadUserRelations(User user) {
         if (user == null || user.getId() == 0) return;
 
-        // La procédure stockée retourne 4 REF CURSORs
         String sql = "{call pkg_user_data.load_user_data(?, ?, ?, ?, ?)}";
 
         try (CallableStatement cs = connection.prepareCall(sql)) {
             cs.setInt(1, user.getId());
 
-            cs.registerOutParameter(2, OracleTypes.CURSOR); // Wishlists créées
-            cs.registerOutParameter(3, OracleTypes.CURSOR); // Wishlists partagées
-            cs.registerOutParameter(4, OracleTypes.CURSOR); // Infos de partage
-            cs.registerOutParameter(5, OracleTypes.CURSOR); // Contributions
+            cs.registerOutParameter(2, OracleTypes.CURSOR); 
+            cs.registerOutParameter(3, OracleTypes.CURSOR); 
+            cs.registerOutParameter(4, OracleTypes.CURSOR); 
+            cs.registerOutParameter(5, OracleTypes.CURSOR); 
 
             cs.execute();
             
-            System.out.println("DAO DEBUG: Démarrage du chargement des relations pour User ID: " + user.getId());
-
-            // 1. Wishlists créées
-            int createdCount = 0;
             try (ResultSet rs = (ResultSet) cs.getObject(2)) {
                 while (rs.next()) {
                     Wishlist wl = new Wishlist();
@@ -164,18 +119,10 @@ public class UserDAO extends AbstractDAO<User> {
                     }
                     wl.setStatus(Status.valueOf(rs.getString("STATUS")));
                     user.getCreatedWishlists().add(wl); 
-                    createdCount++;
-                    System.out.println("DAO DEBUG: Wishlist Créée chargée -> ID: " + wl.getId() + ", Titre: " + wl.getTitle());
-
-                    // HYDRATATION : Chargement des Gifts pour cette Wishlist
                     this.loadWishlistGifts(wl);
                 }
             }
-            System.out.println("DAO DEBUG: " + createdCount + " Wishlists Créées chargées.");
 
-
-            // 2. Wishlists partagées
-            int sharedCount = 0;
             try (ResultSet rs = (ResultSet) cs.getObject(3)) {
                 while (rs.next()) {
                     Wishlist wl = new Wishlist();
@@ -187,80 +134,44 @@ public class UserDAO extends AbstractDAO<User> {
                     }
                     wl.setStatus(Status.valueOf(rs.getString("STATUS")));
                     user.getSharedWishlists().add(wl);
-                    sharedCount++;
-                    System.out.println("DAO DEBUG: Wishlist Partagée chargée -> ID: " + wl.getId() + ", Titre: " + wl.getTitle());
-                    
-                    // HYDRATATION : Chargement des Gifts pour cette Wishlist
                     this.loadWishlistGifts(wl);
                 }
             }
-            System.out.println("DAO DEBUG: " + sharedCount + " Wishlists Partagées chargées.");
 
-            // 3. Infos de partage (Liaison entre la Wishlist et les détails du partage)
-            int infoCount = 0;
             try (ResultSet rs = (ResultSet) cs.getObject(4)) {
                 while (rs.next()) {
                     SharedWishlist sw = new SharedWishlist();
-                    
-                    // On utilise WISHLIST_ID comme ID pour l'objet SharedWishlist
                     sw.setId(rs.getInt("WISHLIST_ID")); 
-                    
                     if (rs.getTimestamp("SHARED_AT") != null) {
                         sw.setSharedAt(rs.getTimestamp("SHARED_AT").toLocalDateTime());
                     }
-                    
                     sw.setNotification(rs.getString("NOTIFICATION"));
-                    
-                    // Ajout à la collection de l'utilisateur
                     user.getSharedWishlistInfos().add(sw);
-                    infoCount++;
-                    
-                    System.out.println("DAO DEBUG: Info de partage ajoutée pour la Wishlist ID: " + sw.getId());
                 }
             }
-            System.out.println("DAO DEBUG: " + infoCount + " objets SharedWishlist créés.");
-            // 4. Contributions (Non implémenté ici, mais le curseur est géré)
 
         } catch (SQLException e) {
-            System.err.println("DAO ERROR: Erreur lors du chargement des relations pour l'utilisateur " + user.getId());
             e.printStackTrace();
         }
     }
     
-    //----------------------------------------------------------------------
-    // Implémentations des méthodes héritées (pour la complétude)
-    //----------------------------------------------------------------------
-    
     @Override
     public boolean create(User user) {
-        // On repasse à 5 points d'interrogation
         String sql = "{call pkg_user_auth.register_user(?, ?, ?, ?, ?)}";
-        System.out.println("[API-DAO] Appel procédure d'inscription (Originale) pour " + user.getEmail());
 
         try (CallableStatement cs = connection.prepareCall(sql)) {
-            // Paramètres IN
             cs.setString(1, user.getUsername());
             cs.setString(2, user.getEmail().trim().toLowerCase());
             cs.setString(3, user.getPsw());
 
-            // Paramètres OUT (Comme avant)
-            cs.registerOutParameter(4, java.sql.Types.VARCHAR); // p_success
-            cs.registerOutParameter(5, java.sql.Types.VARCHAR); // p_error_msg
+            cs.registerOutParameter(4, java.sql.Types.VARCHAR); 
+            cs.registerOutParameter(5, java.sql.Types.VARCHAR); 
 
             cs.execute();
             
             String successStr = cs.getString(4);
-            String errorMsg = cs.getString(5);
-
-            if ("TRUE".equalsIgnoreCase(successStr)) {
-                System.out.println("[API-DAO] Inscription réussie (Note: ID non récupéré)");
-                return true;
-            } else {
-                System.err.println("[API-DAO] Échec procédure : " + errorMsg);
-                return false;
-            }
+            return "TRUE".equalsIgnoreCase(successStr);
         } catch (SQLException e) {
-            System.err.println("[API-DAO] Erreur SQL : " + e.getMessage());
             e.printStackTrace();
             return false;
         }
@@ -268,13 +179,11 @@ public class UserDAO extends AbstractDAO<User> {
 
     @Override
     public boolean delete(User obj) {
-        // Logique de suppression (à implémenter)
         return false;
     }
 
     @Override
     public boolean update(User obj) {
-        // Logique de mise à jour (à implémenter)
         return false;
     }
 
@@ -293,14 +202,13 @@ public class UserDAO extends AbstractDAO<User> {
     @Override
     public List<User> findAll() {
         List<User> users = new java.util.ArrayList<>();
-        // ATTENTION : Utilise "User" avec guillemets si c'est ainsi qu'elle est créée en BD
         String sql = "SELECT ID, USERNAME, EMAIL FROM \"User\" ORDER BY USERNAME";
         
         try (java.sql.PreparedStatement ps = connection.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
                 User u = new User();
-                u.setId(rs.getInt("ID")); // Oracle renvoie souvent les noms en majuscules
+                u.setId(rs.getInt("ID")); 
                 u.setUsername(rs.getString("USERNAME"));
                 u.setEmail(rs.getString("EMAIL"));
                 users.add(u);

@@ -3,7 +3,7 @@ package be.project.model;
 import be.project.DAO.AbstractDAOFactory;
 import be.project.DAO.UserDAO;
 import java.io.Serializable;
-import java.sql.SQLException; // On garde juste l'exception pour la signature
+import java.sql.SQLException; 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -24,21 +24,14 @@ public class User implements Serializable {
 
     public User() {}
 
-    // --- LE RACCOURCI (Méthode privée pour les instances) ---
     private UserDAO dao() {
         return (UserDAO) AbstractDAOFactory.getFactory(AbstractDAOFactory.JDBC_DAO).getUserDAO();
     }
 
-    // --- Méthodes Active Record ---
-
     public static User authenticate(String email, String psw) throws SQLException {
-        // 1. Appel à la Factory (plus de connexion manuelle)
         UserDAO dao = (UserDAO) AbstractDAOFactory.getFactory(AbstractDAOFactory.JDBC_DAO).getUserDAO();
-        
-        // 2. Appel de la méthode spécifique du DAO
         User user = dao.authenticate(email, psw);
         
-        // 3. Logique métier (Token) reste ici
         if (user != null) {
             user.setToken(user.generateJwtToken());
         }
@@ -46,30 +39,22 @@ public class User implements Serializable {
     }
 
     public boolean register() throws SQLException {
-        // Nettoyé : on utilise le raccourci dao()
-        // Plus de try/catch SQL ici, c'est le DAO qui gère ou propage
         return dao().create(this);
     }
 
     public static List<User> getAllUsers() throws SQLException {
-        // Appel direct à la Factory
         return AbstractDAOFactory.getFactory(AbstractDAOFactory.JDBC_DAO).getUserDAO().findAll();
     }
 
     public static User findById(int id) throws SQLException {
-        // Appel direct à la Factory
         return AbstractDAOFactory.getFactory(AbstractDAOFactory.JDBC_DAO).getUserDAO().find(id);
     }
 
-    /**
-     * Génère un Token JWT (Logique de sécurité)
-     */
     public String generateJwtToken() {
         String payload = this.id + ":" + this.email + ":" + System.currentTimeMillis();
         return "fake-jwt-token-" + payload;
     }
 
-    // --- Getters et Setters ---
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
     public String getUsername() { return username; }

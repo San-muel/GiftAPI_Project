@@ -23,19 +23,11 @@ public class SingletonConnection {
         }
     }
 
-    /**
-     * Retourne la connexion existante ou en crée une nouvelle.
-     * Désactive l'auto-commit pour permettre les commits manuels dans le DAO.
-     */
     public static synchronized Connection getConnection() {
         try {
-            // Vérification si la connexion est valide (timeout de 2 secondes)
             if (connection == null || connection.isClosed() || !connection.isValid(2)) {
                 System.out.println("DEBUG: Ouverture d'une nouvelle connexion Oracle...");
                 connection = DriverManager.getConnection(URL, USER, PASS);
-                
-                // --- LA CORRECTION EST ICI ---
-                // On désactive l'auto-commit pour autoriser conn.commit() dans le DAO
                 connection.setAutoCommit(false); 
             }
         } catch (SQLException e) {

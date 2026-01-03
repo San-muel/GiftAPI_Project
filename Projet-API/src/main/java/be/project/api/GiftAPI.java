@@ -23,7 +23,6 @@ public class GiftAPI {
         if (userId == -1) return Response.status(Response.Status.UNAUTHORIZED).build();
 
         try {
-            // Appel à la méthode statique du modèle
             List<Gift> gifts = Gift.getAllForUser(userId);
             return Response.ok(objectMapper.writeValueAsString(gifts)).build();
         } catch (Exception e) {
@@ -40,22 +39,18 @@ public class GiftAPI {
             Gift gift, 
             @Context HttpHeaders headers) {
         
-        // 1. Sécurité : Validation du Token
         int userId = HelpMethode.validateAndExtractUserId(headers.getHeaderString(HttpHeaders.AUTHORIZATION));
         if (userId == -1) return Response.status(Response.Status.UNAUTHORIZED).build();
 
         try {
-            // 2. Préparation de l'objet (Active Record)
             gift.setId(giftId); 
             
-            // 3. Appel de la logique métier dans le modèle
-            // On passe wishlistId et userId pour vérifier que l'utilisateur possède bien la liste
             boolean success = gift.updatePriority(wishlistId, userId);
             
             if (success) {
-                return Response.noContent().build(); // 204 Success
+                return Response.noContent().build();
             } else {
-                return Response.status(Response.Status.FORBIDDEN).build(); // 403 si pas le propriétaire
+                return Response.status(Response.Status.FORBIDDEN).build();
             }
         } catch (Exception e) {
             e.printStackTrace();

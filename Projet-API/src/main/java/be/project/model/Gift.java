@@ -25,43 +25,33 @@ public class Gift implements Serializable {
 
     public Gift() {}
     
-    // --- LE RACCOURCI MAGIQUE (Méthode utilitaire privée) ---
     private GiftDAO dao() {
         return (GiftDAO) AbstractDAOFactory.getFactory(AbstractDAOFactory.JDBC_DAO).getGiftDAO();
     }
-
-    // --- Méthodes d'Action (Active Record) ---
 
     public Gift create(int wishlistId, int userId) throws SQLException {
         return dao().create(this, wishlistId);
     }
 
     public boolean update(int wishlistId, int userId) throws SQLException {
-        // Plus de connexion manuelle ici, tout est délégué
         return dao().update(this, wishlistId, userId);
     }
     
     public boolean updatePriority(int wishlistId, int userId) throws Exception {
-        // Le DAO gère la connexion et l'exécution
         return dao().updatePriority(this.id, this.priority);
     }
 
     public boolean delete(int userId) throws SQLException {
-        // Simple et efficace
         return dao().delete(this.id, userId);
     }
 
-    // --- Méthode Statique (Cas particulier) ---
     public static List<Gift> getAllForUser(int userId) throws SQLException {
-        // Comme on est dans un contexte 'static', on ne peut pas utiliser 'this.dao()'
-        // On appelle donc la factory directement ici.
         GiftDAO dao = (GiftDAO) AbstractDAOFactory.getFactory(AbstractDAOFactory.JDBC_DAO).getGiftDAO();
         
         if (dao == null) return Collections.emptyList();
         return dao.getAllGiftsForUser(userId);
     }
 
-    // --- Getters / Setters ---
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
 
@@ -88,8 +78,6 @@ public class Gift implements Serializable {
 
     public Set<Contribution> getContributions() { return contributions; }
     public void setContributions(Set<Contribution> contributions) { this.contributions = contributions; }
-
-    // --- Logique Métier (Calculs) ---
 
     @JsonIgnore
     public GiftStatus getStatus() {

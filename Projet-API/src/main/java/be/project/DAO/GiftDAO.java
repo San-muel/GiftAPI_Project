@@ -21,9 +21,7 @@ public class GiftDAO extends AbstractDAO<Gift> {
         return SingletonConnection.getConnection();
     }
 
-    // --- CREATE ---
     public Gift create(Gift gift, int wishlistId) {
-        // Changement : 9 points d'interrogation maintenant
         String sql = "{call pkg_gift_data.create_gift(?, ?, ?, ?, ?, ?, ?, ?, ?)}";
         try (Connection conn = getActiveConnection(); 
              CallableStatement cs = conn.prepareCall(sql)) {
@@ -34,9 +32,9 @@ public class GiftDAO extends AbstractDAO<Gift> {
             cs.setDouble(4, gift.getPrice());
             cs.setInt(5, gift.getPriority() != null ? gift.getPriority() : 3);
             cs.setString(6, gift.getPhotoUrl());
-            cs.setString(7, gift.getSiteUrl()); // <--- NOUVEAU (7ème)
-            cs.setString(8, "AVAILABLE");       // (8ème)
-            cs.registerOutParameter(9, Types.INTEGER); // ID généré (9ème)
+            cs.setString(7, gift.getSiteUrl()); 
+            cs.setString(8, "AVAILABLE");       
+            cs.registerOutParameter(9, Types.INTEGER); 
 
             cs.execute();
             int generatedId = cs.getInt(9);
@@ -52,9 +50,7 @@ public class GiftDAO extends AbstractDAO<Gift> {
         return null;
     }
 
-    // --- UPDATE ---
     public boolean update(Gift gift, int wishlistId, int userId) {
-        // Changement : 10 points d'interrogation maintenant
         String sql = "{call pkg_gift_data.update_gift(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)}";
         try (Connection conn = getActiveConnection();
              CallableStatement cs = conn.prepareCall(sql)) {
@@ -67,8 +63,8 @@ public class GiftDAO extends AbstractDAO<Gift> {
             cs.setDouble(6, gift.getPrice());
             cs.setInt(7, gift.getPriority() != null ? gift.getPriority() : 3);
             cs.setString(8, gift.getPhotoUrl());
-            cs.setString(9, gift.getSiteUrl()); // <--- NOUVEAU (9ème)
-            cs.registerOutParameter(10, Types.INTEGER); // Status retour (10ème)
+            cs.setString(9, gift.getSiteUrl()); 
+            cs.registerOutParameter(10, Types.INTEGER); 
 
             cs.execute();
             int result = cs.getInt(10);
@@ -83,7 +79,6 @@ public class GiftDAO extends AbstractDAO<Gift> {
         return false;
     }
 
-    // --- DELETE ---
     public boolean delete(int giftId, int userId) {
         String sql = "{call pkg_gift_data.delete_gift(?, ?, ?)}";
         try (Connection conn = getActiveConnection();
@@ -104,9 +99,7 @@ public class GiftDAO extends AbstractDAO<Gift> {
         return false;
     }
 
-    // --- GET ALL FOR USER (Côté SERVEUR API) ---
     public List<Gift> getAllGiftsForUser(int userId) {
-        System.out.println("\n[DEBUG SERVEUR DAO] --- Récupération des cadeaux pour User: " + userId + " ---");
         List<Gift> gifts = new ArrayList<>();
         String sql = "{call pkg_gift_data.get_user_gifts(?, ?)}";
         
@@ -116,28 +109,17 @@ public class GiftDAO extends AbstractDAO<Gift> {
             cs.setInt(1, userId);
             cs.registerOutParameter(2, OracleTypes.CURSOR);
             
-            System.out.println("[DEBUG SERVEUR DAO] Exécution de pkg_gift_data.get_user_gifts...");
             cs.execute();
             
             try (ResultSet rs = (ResultSet) cs.getObject(2)) {
-                int count = 0;
                 while (rs.next()) {
-                    count++;
-                    Gift g = map(rs); // Utilise ta méthode map qui contient rs.getString("SITE_URL")
-                    
-                    // --- PRINT DE VÉRIFICATION ---
-                    System.out.println("[DEBUG SERVEUR DAO] Cadeau #" + count + " trouvé: " + g.getName());
-                    System.out.println("[DEBUG SERVEUR DAO] -> Site URL en DB: " + g.getSiteUrl());
-                    
+                    Gift g = map(rs); 
                     gifts.add(g);
                 }
-                System.out.println("[DEBUG SERVEUR DAO] Total cadeaux récupérés: " + count);
             }
         } catch (SQLException e) { 
-            System.err.println("[ERREUR SERVEUR DAO] Erreur dans getAllGiftsForUser: " + e.getMessage());
             e.printStackTrace(); 
         }
-        System.out.println("[DEBUG SERVEUR DAO] --- FIN RÉCUPÉRATION ---\n");
         return gifts;
     }
 
@@ -173,7 +155,7 @@ public class GiftDAO extends AbstractDAO<Gift> {
             int result = cs.getInt(3);
 
             if (result > 0) {
-                conn.commit(); // <--- AJOUTE CECI IMPÉRATIVEMENT
+                conn.commit(); 
                 return true;
             }
         } catch (SQLException e) {
@@ -182,7 +164,6 @@ public class GiftDAO extends AbstractDAO<Gift> {
         return false;
     }
 
-    // Mapping
     private Gift map(ResultSet rs) throws SQLException {
         Gift g = new Gift();
         int id = 0;
@@ -197,7 +178,7 @@ public class GiftDAO extends AbstractDAO<Gift> {
         g.setPrice(rs.getDouble("PRICE"));
         g.setPriority(rs.getInt("PRIORITY"));
         g.setPhotoUrl(rs.getString("PHOTO_URL"));
-        g.setSiteUrl(rs.getString("SITE_URL")); // <--- NE PAS OUBLIER LE MAPPING
+        g.setSiteUrl(rs.getString("SITE_URL")); 
         return g;
     }
 

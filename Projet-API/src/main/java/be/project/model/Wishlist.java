@@ -19,8 +19,6 @@ public class Wishlist implements Serializable {
     private Status status; 
     private Set<Gift> gifts = new HashSet<>();
     
-    // --- Constructeurs ---
-    
     public Wishlist() {}
     
     public Wishlist(int id, String title, String occasion, LocalDate expirationDate, Status status) {
@@ -32,59 +30,34 @@ public class Wishlist implements Serializable {
         this.status = status;
     }
 
-    // --- LE RACCOURCI (Méthode privée pour les instances) ---
     private WishlistDAO dao() {
         return (WishlistDAO) AbstractDAOFactory.getFactory(AbstractDAOFactory.JDBC_DAO).getWishlistDAO();
     }
     
-    // --- Méthodes Métier (Active Record) ---
-
-    /**
-     * Crée la liste actuelle en base de données pour l'utilisateur donné.
-     */
     public Wishlist create(int userId) {
-        // On utilise le raccourci dao()
         return dao().create(this, userId);
     }
 
-    /**
-     * Met à jour la liste actuelle en base de données.
-     */
     public boolean update(int userId) {
         return dao().update(this, userId);
     }
 
-    /**
-     * Supprime la liste actuelle de la base de données.
-     */
     public boolean delete(int userId) {
         return dao().delete(this.getId(), userId);
     }
 
-    // --- Méthodes Statiques (Recherche) ---
-
-    /**
-     * Récupère toutes les listes d'un utilisateur spécifique.
-     */
     public static List<Wishlist> getAllForUser(int userId) {
-        // Appel direct à la Factory + Cast car findAllByUserId est spécifique à WishlistDAO
         WishlistDAO dao = (WishlistDAO) AbstractDAOFactory.getFactory(AbstractDAOFactory.JDBC_DAO).getWishlistDAO();
         return dao.findAllByUserId(userId);
     }
 
     public static Wishlist find(int id) {
-        // Appel standard via la Factory
         return AbstractDAOFactory.getFactory(AbstractDAOFactory.JDBC_DAO).getWishlistDAO().find(id);
     }
     
-    /**
-     * Récupère toutes les listes de la base de données (Sans filtre user).
-     */
     public static List<Wishlist> findAll() {
         return AbstractDAOFactory.getFactory(AbstractDAOFactory.JDBC_DAO).getWishlistDAO().findAll();
     }
-
-    // --- Getters & Setters ---
 
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
@@ -104,8 +77,6 @@ public class Wishlist implements Serializable {
     public Set<Gift> getGifts() { return gifts; }
     public void setGifts(Set<Gift> gifts) { this.gifts = gifts; }
     
-    // --- Overrides ---
-
     @Override
     public String toString() {
         return "Wishlist{" +

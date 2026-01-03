@@ -13,22 +13,16 @@ public class SharedWishlistDAO extends AbstractDAO<SharedWishlist> {
         super(connect);  
     }
 
-    /**
-     * Utilise la procédure stockée pkg_shared_wishlist.share_list
-     */
     public boolean createWithTarget(SharedWishlist obj, int targetUserId) {
-        // Appel de la procédure stockée (5 paramètres : 3 IN, 2 OUT)
         String sql = "{call pkg_shared_wishlist.share_list(?, ?, ?, ?, ?)}";
         
         try (CallableStatement cs = connection.prepareCall(sql)) {
-            // Paramètres d'entrée
-            cs.setInt(1, obj.getId()); // ID de la wishlist
+            cs.setInt(1, obj.getId()); 
             cs.setInt(2, targetUserId);
             cs.setString(3, obj.getNotification());
 
-            // Paramètres de sortie
-            cs.registerOutParameter(4, Types.VARCHAR); // p_success
-            cs.registerOutParameter(5, Types.VARCHAR); // p_error_msg
+            cs.registerOutParameter(4, Types.VARCHAR); 
+            cs.registerOutParameter(5, Types.VARCHAR); 
 
             cs.execute();
 
@@ -47,7 +41,6 @@ public class SharedWishlistDAO extends AbstractDAO<SharedWishlist> {
 
     @Override
     public boolean create(SharedWishlist obj) {
-        // On n'utilise pas cette méthode car il manque l'ID de l'utilisateur cible
         return false;
     }
 

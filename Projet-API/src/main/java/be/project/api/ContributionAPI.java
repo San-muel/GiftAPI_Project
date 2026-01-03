@@ -19,12 +19,8 @@ public class ContributionAPI {
     private final ObjectMapper objectMapper;
 
     public ContributionAPI() {
-        // --- CONFIGURATION JACKSON POUR CORRIGER LES DATES ---
         this.objectMapper = new ObjectMapper();
-        // Permet de gérer les LocalDateTime (Java 8+)
         this.objectMapper.registerModule(new JavaTimeModule());
-        // INDISPENSABLE : Empêche la conversion des dates en tableau [2025, 12, 25...]
-        // Les force en format String "2025-12-25T..."
         this.objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     }
 
@@ -39,7 +35,6 @@ public class ContributionAPI {
         }
         
         try {
-            // On utilise notre objectMapper configuré pour envoyer le JSON
             return Response.ok(objectMapper.writeValueAsString(c)).build();
         } catch (JsonProcessingException e) {
             e.printStackTrace();
@@ -84,14 +79,12 @@ public class ContributionAPI {
 
     @POST
     public Response create(Contribution contribution) {
-        // --- LOGS DE DEBUG ---
         System.out.println("API POST: Réception demande création contribution");
         System.out.println(" -> Amount: " + contribution.getAmount());
         System.out.println(" -> Comment: " + contribution.getComment());
         System.out.println(" -> GiftID: " + contribution.getGiftId());
         System.out.println(" -> UserID: " + contribution.getUserId());
         
-        // Vérification des données critiques
         if (contribution.getGiftId() == 0 || contribution.getUserId() == 0) {
             System.err.println("API ERREUR: GiftId ou UserId est 0 ! Vérifiez le JSON envoyé.");
             return Response.status(Response.Status.BAD_REQUEST)

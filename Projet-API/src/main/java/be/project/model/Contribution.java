@@ -1,7 +1,7 @@
 package be.project.model;
 
 import be.project.DAO.AbstractDAOFactory;
-import be.project.DAO.ContributionDAO; // Import du DAO spécifique
+import be.project.DAO.ContributionDAO; 
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -30,21 +30,13 @@ public class Contribution implements Serializable {
         this.comment = comment;
     }
 
-    // --- LE RACCOURCI (Méthode privée pour les instances) ---
     private ContributionDAO dao() {
         return (ContributionDAO) AbstractDAOFactory.getFactory(AbstractDAOFactory.JDBC_DAO).getContributionDAO();
     }
 
-    // --- Active Record (Méthodes liées à l'instance) ---
-
     public boolean save() {
-        // Plus propre : on utilise le raccourci dao()
-        // On suppose que les userId et giftId sont déjà set dans 'this'
         return dao().create(this); 
     }
-
-    // --- Méthodes Statiques (Recherche) ---
-    // Pour les méthodes static, on appelle la Factory directement car 'this.dao()' n'existe pas
 
     public static Contribution find(int id) {
         return AbstractDAOFactory.getFactory(AbstractDAOFactory.JDBC_DAO).getContributionDAO().find(id);
@@ -55,12 +47,9 @@ public class Contribution implements Serializable {
     }
     
     public static List<Contribution> findAllByGiftId(int giftId) {
-        // C'est ici que tu avais la connexion "en dur". C'est corrigé :
         ContributionDAO dao = (ContributionDAO) AbstractDAOFactory.getFactory(AbstractDAOFactory.JDBC_DAO).getContributionDAO();
         return dao.findAllByGiftId(giftId);
     }
-
-    // --- Getters / Setters Standards ---
 
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }

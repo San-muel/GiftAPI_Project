@@ -27,7 +27,6 @@ public class WishlistDAO extends AbstractDAO<Wishlist> {
         return SingletonConnection.getConnection();
     }
 
-    // --- CREATE ---
     public Wishlist create(Wishlist wishlist, int userId) {
         String sql = "{call pkg_wishlist_data.create_wishlist(?, ?, ?, ?, ?, ?, ?)}";
         try (Connection conn = getActiveConnection(); 
@@ -53,19 +52,14 @@ public class WishlistDAO extends AbstractDAO<Wishlist> {
         return null;
     }
 
-    // --- UPDATE (Ajouté pour le modèle) ---
- // --- UPDATE (Version SERVEUR API avec Logs) ---
     public boolean update(Wishlist wishlist, int userId) {
-        // La procédure attend 7 paramètres : id, user_id, titre, occasion, date, statut, out_status
         String sql = "{call pkg_wishlist_data.update_wishlist(?, ?, ?, ?, ?, ?, ?)}";
-        
-        System.out.println("[DB-SERVER] Tentative d'UPDATE SQL pour liste ID: " + wishlist.getId());
         
         try (Connection conn = getActiveConnection();
              CallableStatement cs = conn.prepareCall(sql)) {
             
             cs.setInt(1, wishlist.getId());
-            cs.setInt(2, userId); // CREATOR_ID (Sécurité Oracle)
+            cs.setInt(2, userId); 
             cs.setString(3, wishlist.getTitle());
             cs.setString(4, wishlist.getOccasion());
             
@@ -75,34 +69,25 @@ public class WishlistDAO extends AbstractDAO<Wishlist> {
                 cs.setNull(5, java.sql.Types.DATE);
             }
 
-            // CORRECTION ICI : wishlist.getStatus() est déjà une String
             String statusValue = wishlist.getStatus() != null ? wishlist.getStatus().toString() : "ACTIVE";
             cs.setString(6, statusValue);
             
             cs.registerOutParameter(7, java.sql.Types.INTEGER);
 
-            System.out.println("[DB-SERVER] Paramètres : User=" + userId + ", Status=" + statusValue);
-            
             cs.execute();
             
             int result = cs.getInt(7);
-            System.out.println("[DB-SERVER] Résultat Procédure (p_status_out) : " + result);
 
-            if (result >= 1) { // 1 ou plus signifie qu'une ligne a été modifiée
+            if (result >= 1) { 
                 conn.commit();
-                System.out.println("[DB-SERVER] Update réussi et committé.");
                 return true;
-            } else {
-                System.err.println("[DB-SERVER] Update échoué : Aucune ligne trouvée ou UserID incorrect.");
             }
         } catch (SQLException e) { 
-            System.err.println("[DB-SERVER] ERREUR SQL : " + e.getMessage());
             e.printStackTrace(); 
         }
         return false;
     }
 
-    // --- FIND ALL BY USER ID (Ajouté pour le modèle) ---
     public List<Wishlist> findAllByUserId(int userId) {
         List<Wishlist> wishlists = new ArrayList<>();
         String sql = "{call pkg_wishlist_data.get_user_wishlists(?, ?)}";
@@ -120,7 +105,6 @@ public class WishlistDAO extends AbstractDAO<Wishlist> {
         return wishlists;
     }
 
-    // --- FIND BY ID ---
     @Override
     public Wishlist find(int id) {
         Wishlist wishlist = null;

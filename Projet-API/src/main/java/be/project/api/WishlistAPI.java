@@ -18,10 +18,6 @@ public class WishlistAPI {
         this.objectMapper = new ObjectMapper().registerModule(new JavaTimeModule()); 
     }
 
-    // ==========================================
-    // GET : Récupérer MES listes (User connecté)
-    // URL : /api/wishlists
-    // ==========================================
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public Response getWishlists(
@@ -29,7 +25,6 @@ public class WishlistAPI {
             @Context HttpHeaders headers
     ) {
         try {
-            // CAS 1 : Demande des listes publiques
             if ("public".equals(filter)) {
                 System.out.println("[API] Demande de toutes les listes publiques (filter=public)");
                 List<Wishlist> allLists = Wishlist.findAll();
@@ -40,7 +35,6 @@ public class WishlistAPI {
                 return Response.ok(objectMapper.writeValueAsString(allLists)).build();
             }
 
-            // CAS 2 : Pas de filtre, donc on veut les listes de l'utilisateur (Token OBLIGATOIRE)
             int userId = HelpMethode.validateAndExtractUserId(headers.getHeaderString(HttpHeaders.AUTHORIZATION));
             
             if (userId == -1) {
@@ -65,7 +59,6 @@ public class WishlistAPI {
         System.out.println("[DEBUG SERVEUR API] Réception demande publique (findAll)");
 
         try {
-            // Appel direct au modèle sans passer par l'authentification
             List<Wishlist> wishlists = Wishlist.findAll(); 
 
             if (wishlists != null) {
@@ -79,10 +72,6 @@ public class WishlistAPI {
         }
     }
 
-    // ==========================================
-    // POST : Créer une liste
-    // URL : /api/wishlists
-    // ==========================================
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
@@ -97,7 +86,6 @@ public class WishlistAPI {
                 return Response.status(Response.Status.BAD_REQUEST).build();
             }
             
-            // REST Best Practice : Retourner l'URI de la ressource créée dans le Header "Location"
             URI uri = uriInfo.getAbsolutePathBuilder().path(String.valueOf(created.getId())).build();
             
             return Response.created(uri)
@@ -109,15 +97,10 @@ public class WishlistAPI {
         }
     }
 
-    // ==========================================
-    // PUT : Modifier une liste
-    // URL : /api/wishlists/{id}
-    // ==========================================
     @PUT
     @Path("/{id}") 
     @Consumes(MediaType.APPLICATION_JSON)
     public Response modifyWishlist(@PathParam("id") int wishlistId, Wishlist wishlist, @Context HttpHeaders headers) {
-        // 1. Extraction et validation de l'utilisateur via le Token
         int userId = HelpMethode.validateAndExtractUserId(headers.getHeaderString(HttpHeaders.AUTHORIZATION));
         
         System.out.println("======= [API PUT] RECEPTION MODIFICATION =======");
@@ -129,23 +112,20 @@ public class WishlistAPI {
             return Response.status(Response.Status.UNAUTHORIZED).build();
         }
 
-        // 2. Préparation de l'objet métier
         wishlist.setId(wishlistId); 
         System.out.println("[API] Nouveau titre reçu : " + wishlist.getTitle());
         System.out.println("[API] Nouveau statut reçu : " + wishlist.getStatus());
         
         try {
-            // 3. Appel de la couche métier/DAO (côté serveur)
-            // C'est ici que la procédure Oracle PKG_WISHLIST_DATA.UPDATE_WISHLIST est appelée
             System.out.println("[API] Tentative de mise à jour en base de données...");
             boolean success = wishlist.update(userId);
             
             if (success) {
                 System.out.println("[API] SUCCÈS : La base de données a été mise à jour.");
-                return Response.noContent().build(); // 204
+                return Response.noContent().build();
             } else {
                 System.err.println("[API] ÉCHEC : La procédure SQL a retourné 0 (Propriétaire incorrect ou ID inexistant).");
-                return Response.status(Response.Status.FORBIDDEN).build(); // 403
+                return Response.status(Response.Status.FORBIDDEN).build();
             }
         } catch (Exception e) {
             System.err.println("[API] ERREUR CRITIQUE : " + e.getMessage());
@@ -156,10 +136,6 @@ public class WishlistAPI {
         }
     }
 
-    // ==========================================
-    // DELETE : Supprimer une liste
-    // URL : /api/wishlists/{id}
-    // ==========================================
     @DELETE
     @Path("/{id}") 
     public Response deleteWishlist(@PathParam("id") int wishlistId, @Context HttpHeaders headers) {
@@ -176,10 +152,7 @@ public class WishlistAPI {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
         }
     }
-	 // ==========================================
-	 // GET : Récupérer une liste précise par son ID
-	 // URL : /api/wishlists/{id}
-	 // ==========================================
+
 	 @GET
 	 @Path("/{id}")
 	 @Produces(MediaType.APPLICATION_JSON)
@@ -187,7 +160,6 @@ public class WishlistAPI {
 	     System.out.println("[DEBUG SERVEUR API] Demande de détails pour la liste ID : " + id);
 	
 	     try {
-	         // APPEL ACTIVE RECORD : Le modèle cherche en DB via le DAO
 	         Wishlist wishlist = Wishlist.find(id);
 	
 	         if (wishlist != null) {
